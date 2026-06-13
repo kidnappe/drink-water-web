@@ -1146,12 +1146,12 @@ function renderLeaderboard() {
         renderList(mapped);
         return;
       }
-      /* 在线数据为空，回退 */
-      renderList(getMockUsers(19).concat([myEntry]));
+      /* 在线数据为空，只显示自己 */
+      renderList(myEntry.todayMl > 0 ? [myEntry] : []);
     });
   } else {
-    /* 未配置 Supabase，直接用 mock */
-    renderList(getMockUsers(19).concat([myEntry]));
+    /* 未配置 Supabase，只显示自己 */
+    renderList(myEntry.todayMl > 0 ? [myEntry] : []);
   }
 
   if (lbInterval) { clearInterval(lbInterval); }

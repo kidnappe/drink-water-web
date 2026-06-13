@@ -57,9 +57,6 @@
     .garden { text-align: center; padding: 20px 16px 14px; }
     .plant-emoji { font-size: 4rem; transition: transform .5s; }
     .plant-name { font-size: 0.875rem; color: #666; margin-top: 4px; }
-    .streak-bar { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
-    .streak-dot { width: 28px; height: 28px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 0.8125rem; transition: all .3s; }
-    .streak-dot.done { background: #4CAF50; color: #fff; }
     .progress-wrap { display: flex; flex-direction: column; align-items: center; padding: 12px 0; }
     .cup-container { width: 110px; height: 140px; position: relative; }
     .cup-body { width: 100%; height: 100%; border: 3px solid #4A90E2; border-top: none; border-radius: 0 0 14px 14px; position: relative; overflow: hidden; background: rgba(74,144,226,.04); }
@@ -174,78 +171,74 @@
   </style>
 </head>
 <body>
-<div class="appbar" id="appbar">喝杯水吧 💧</div>
+<div class="appbar" id="appbar">
+  <div id="appbarTitle">喝杯水吧 💧</div>
+  <div id="motivationMsg" style="font-size:0.75rem;font-weight:400;opacity:.9;margin-top:2px;"></div>
+</div>
 <div class="page active" id="page-home">
-  <div class="card garden" id="gardenCard">
-    <div class="plant-emoji" id="plantEmoji">🌰</div>
-    <div class="plant-name" id="plantName">种子休眠中</div>
-    <div class="streak-bar" id="streakBar"></div>
-    <div style="font-size:0.75rem;color:#999;margin-top:4px;">连续达标 <span id="streakCount">0</span> 天</div>
-    <div style="font-size:0.75rem;color:#4A90E2;margin-top:6px;font-weight:500;" id="motivationMsg"></div>
-  </div>
   <div class="card">
     <div class="progress-wrap">
       <div class="cup-container">
         <div class="cup-body" id="cupBody">
-          <div class="water-area" id="waterArea">
-            <div class="cup-wave"><svg viewBox="0 0 110 8" preserveAspectRatio="none">
-              <path class="w1" d="M0,4 Q14,0 28,4 T56,4 T84,4 T110,4 V8 H0 Z" fill="rgba(74,144,226,.5)"/>
-              <path class="w2" d="M0,5 Q14,8 28,5 T56,5 T84,5 T110,5 V8 H0 Z" fill="rgba(74,144,226,.3)"/>
-            </svg></div>
-            <div class="water-fill-bg"></div>
-            <div class="water-highlight"></div>
-            <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+            <div class="water-area" id="waterArea">
+              <div class="cup-wave"><svg viewBox="0 0 110 8" preserveAspectRatio="none">
+                <path class="w1" d="M0,4 Q14,0 28,4 T56,4 T84,4 T110,4 V8 H0 Z" fill="rgba(74,144,226,.5)"/>
+                <path class="w2" d="M0,5 Q14,8 28,5 T56,5 T84,5 T110,5 V8 H0 Z" fill="rgba(74,144,226,.3)"/>
+              </svg></div>
+              <div class="water-fill-bg"></div>
+              <div class="water-highlight"></div>
+              <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+            </div>
           </div>
+          <div class="cup-handle"></div>
+          <div class="overflow-wrap" id="overflowWrap"></div>
         </div>
-        <div class="cup-handle"></div>
-        <div class="overflow-wrap" id="overflowWrap"></div>
-      </div>
-      <div class="cup-stats">
-        <span class="cup-amount" id="todayAmount">0</span><span class="cup-unit">ml</span>
-        <div class="cup-label" id="todayGoalText">目标：2000 ml</div>
-        <div class="cup-remain" id="todayRemainText">还差 2000 ml</div>
-      </div>
-      <div class="track-wrap">
-        <div class="track-runner" id="trackRunner">🏃</div>
-        <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
-        <div class="track-label"><span>0 ml</span><span id="trackGoalLabel">2000 ml</span></div>
-      </div>
+        <div class="cup-stats">
+          <span class="cup-amount" id="todayAmount">0</span><span class="cup-unit">ml</span>
+          <div class="cup-label" id="todayGoalText">目标：2000 ml</div>
+          <div class="cup-remain" id="todayRemainText">还差 2000 ml</div>
+        </div>
+    </div>
+    <div class="track-wrap" style="margin-top:10px;">
+      <div class="track-runner" id="trackRunner">🏃</div>
+      <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
+      <div class="track-label"><span>0 ml</span><span id="trackGoalLabel">2000 ml</span></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">😊 当下心情 <span class="mood-help" onclick="showMoodHelp()" title="如何添加心情">❔</span></div>
+    <div class="card-title">😊 当下心情 <span class="mood-help" onclick="showMoodHelp()" title="&#x5982;&#x4F55;&#x6DFB;&#x52A0;&#x5FC3;&#x60C5;">&#x2754;</span></div>
     <div class="mood-row" id="moodRow">
-      <button class="mood-btn" data-mood="😊" onclick="selectMood(this)">😊</button>
-      <button class="mood-btn" data-mood="😄" onclick="selectMood(this)">😄</button>
-      <button class="mood-btn" data-mood="🥰" onclick="selectMood(this)">🥰</button>
-      <button class="mood-btn" data-mood="😌" onclick="selectMood(this)">😌</button>
-      <button class="mood-btn" data-mood="😤" onclick="selectMood(this)">😤</button>
-      <button class="mood-btn" data-mood="😢" onclick="selectMood(this)">😢</button>
-      <button class="mood-btn" data-mood="🤯" onclick="selectMood(this)">🤯</button>
-      <button class="mood-btn" data-mood="💪" onclick="selectMood(this)">💪</button>
-      <button class="mood-btn" data-mood="🫠" onclick="selectMood(this)">🫠</button>
-      <button class="mood-btn" data-mood="🤗" onclick="selectMood(this)">🤗</button>
-      <button class="mood-btn" data-mood="😎" onclick="selectMood(this)">😎</button>
-      <button class="mood-btn" data-mood="🥳" onclick="selectMood(this)">🥳</button>
-      <button class="mood-btn" data-mood="🤩" onclick="selectMood(this)">🤩</button>
-      <button class="mood-btn" data-mood="😇" onclick="selectMood(this)">😇</button>
-      <button class="mood-btn" data-mood="😏" onclick="selectMood(this)">😏</button>
-      <button class="mood-btn" data-mood="🤔" onclick="selectMood(this)">🤔</button>
-      <button class="mood-btn" data-mood="🥶" onclick="selectMood(this)">🥶</button>
-      <button class="mood-btn" data-mood="🥺" onclick="selectMood(this)">🥺</button>
-      <button class="mood-btn" data-mood="😴" onclick="selectMood(this)">😴</button>
-      <button class="mood-btn" data-mood="🤪" onclick="selectMood(this)">🤪</button>
-      <button class="mood-btn" data-mood="😰" onclick="selectMood(this)">😰</button>
+      <button class="mood-btn" data-mood="&#x1F60A;" onclick="selectMood(this)">&#x1F60A;</button>
+      <button class="mood-btn" data-mood="&#x1F604;" onclick="selectMood(this)">&#x1F604;</button>
+      <button class="mood-btn" data-mood="&#x1F970;" onclick="selectMood(this)">&#x1F970;</button>
+      <button class="mood-btn" data-mood="&#x1F60C;" onclick="selectMood(this)">&#x1F60C;</button>
+      <button class="mood-btn" data-mood="&#x1F624;" onclick="selectMood(this)">&#x1F624;</button>
+      <button class="mood-btn" data-mood="&#x1F622;" onclick="selectMood(this)">&#x1F622;</button>
+      <button class="mood-btn" data-mood="&#x1F92F;" onclick="selectMood(this)">&#x1F92F;</button>
+      <button class="mood-btn" data-mood="&#x1F4AA;" onclick="selectMood(this)">&#x1F4AA;</button>
+      <button class="mood-btn" data-mood="&#x1F9E0;" onclick="selectMood(this)">&#x1F9E0;</button>
+      <button class="mood-btn" data-mood="&#x1F917;" onclick="selectMood(this)">&#x1F917;</button>
+      <button class="mood-btn" data-mood="&#x1F60E;" onclick="selectMood(this)">&#x1F60E;</button>
+      <button class="mood-btn" data-mood="&#x1F973;" onclick="selectMood(this)">&#x1F973;</button>
+      <button class="mood-btn" data-mood="&#x1F929;" onclick="selectMood(this)">&#x1F929;</button>
+      <button class="mood-btn" data-mood="&#x1F607;" onclick="selectMood(this)">&#x1F607;</button>
+      <button class="mood-btn" data-mood="&#x1F60F;" onclick="selectMood(this)">&#x1F60F;</button>
+      <button class="mood-btn" data-mood="&#x1F914;" onclick="selectMood(this)">&#x1F914;</button>
+      <button class="mood-btn" data-mood="&#x1F976;" onclick="selectMood(this)">&#x1F976;</button>
+      <button class="mood-btn" data-mood="&#x1F97A;" onclick="selectMood(this)">&#x1F97A;</button>
+      <button class="mood-btn" data-mood="&#x1F634;" onclick="selectMood(this)">&#x1F634;</button>
+      <button class="mood-btn" data-mood="&#x1F92A;" onclick="selectMood(this)">&#x1F92A;</button>
+      <button class="mood-btn" data-mood="&#x1F630;" onclick="selectMood(this)">&#x1F630;</button>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">选择水量</div>
+    <div class="card-title">&#x9009;&#x62E9;&#x6C34;&#x91CF;</div>
     <div class="btn-row">
       <button class="btn-water small" onclick="addWater(250)">250ml</button>
       <button class="btn-water small" onclick="addWater(350)">350ml</button>
       <button class="btn-water small" onclick="addWater(500)">500ml</button>
       <button class="btn-water small" onclick="addWater(1000)">1000ml</button>
-      <button class="btn-water small custom" onclick="showCustomDialog()">自定义</button>
+      <button class="btn-water small custom" onclick="showCustomDialog()">&#x81EA;&#x5B9A;&#x4E49;</button>
     </div>
   </div>
   <div class="card">
@@ -254,6 +247,14 @@
       <span style="font-size:0.8125rem;color:#999;" id="recordCount">共 0 条</span>
     </div>
     <div id="recordList"><div class="empty-state">今天还没有喝水记录哦～</div></div>
+  </div>
+</div>
+<div class="page" id="page-garden">
+  <div class="card garden" style="text-align:center;padding:40px 16px;">
+    <div class="plant-emoji" id="plantEmoji" style="font-size:5rem;">🌰</div>
+    <div class="plant-name" id="plantName" style="font-size:1rem;color:#666;margin-top:8px;">种子休眠中</div>
+    <div style="font-size:0.875rem;color:#999;margin-top:20px;">连续达标</div>
+    <div style="font-size:2.5rem;font-weight:700;color:#4A90E2;margin-top:4px;"><span id="streakCount">0</span> 天</div>
   </div>
 </div>
 
@@ -375,9 +376,10 @@
 
 <nav class="bottom-nav">
   <button class="active" onclick="switchTab(0)"><span class="icon">🏠</span> 首页</button>
-  <button onclick="switchTab(1)"><span class="icon">🏆</span> 排行</button>
-  <button onclick="switchTab(2)"><span class="icon">📊</span> 历史</button>
-  <button onclick="switchTab(3)"><span class="icon">⚙️</span> 设置</button>
+  <button onclick="switchTab(1)"><span class="icon">🌱</span> 花园</button>
+  <button onclick="switchTab(2)"><span class="icon">🏆</span> 排行</button>
+  <button onclick="switchTab(3)"><span class="icon">📊</span> 历史</button>
+  <button onclick="switchTab(4)"><span class="icon">⚙️</span> 设置</button>
 </nav>
 
 <script>
@@ -607,20 +609,6 @@ function renderGarden(records, settings) {
   var idx = Math.floor(Math.random() * msgs.length);
   var el = document.getElementById('motivationMsg');
   if (el) { el.textContent = msgs[idx]; }
-  var bar = document.getElementById('streakBar');
-  bar.innerHTML = '';
-  var today = new Date();
-  var weekDays = ['\u65e5', '\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d'];
-  for (var i = 6; i >= 0; i--) {
-    var d = new Date(today);
-    d.setDate(d.getDate() - i);
-    var key = getDateKey(d);
-    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
-    var dot = document.createElement('div');
-    dot.className = 'streak-dot' + (dayTotal >= settings.dailyGoal ? ' done' : '');
-    dot.textContent = weekDays[d.getDay()];
-    bar.appendChild(dot);
-  }
 }
 var lastGoalMet = false;
 
@@ -1221,14 +1209,18 @@ function showNicknameDialog() {
 }
 
 function switchTab(idx) {
-  var pages = ['page-home', 'page-leaderboard', 'page-history', 'page-settings'];
-  var titles = ['\u559d\u676f\u6c34\u5427 \u{1F4A7}', '\u6392\u884c\u699c \u{1F3C6}', '\u559d\u6c34\u5386\u53f2 \u{1F4CA}', '\u8bbe\u7f6e \u2699\uFE0F'];
+  var pages = ['page-home', 'page-garden', 'page-leaderboard', 'page-history', 'page-settings'];
+  var titles = ['喝杯水吧 💧', '我的花园 🌱', '排行榜 🏆', '喝水历史 📊', '设置 ⚙️'];
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.getElementById(pages[idx]).classList.add('active');
-  document.getElementById('appbar').textContent = titles[idx];
+  document.getElementById('appbarTitle').textContent = titles[idx];
+  /* 只在首页显示鼓励语 */
+  var msgEl = document.getElementById('motivationMsg');
+  if (msgEl) { msgEl.style.display = (idx === 0) ? '' : 'none'; }
   document.querySelectorAll('.bottom-nav button').forEach(function(b, i) { b.classList.toggle('active', i === idx); });
-  if (idx === 2) { createChart(); renderHeatmap(); }
-  if (idx === 1) { renderLeaderboard(); }
+  if (idx === 2) { renderLeaderboard(); }
+  if (idx === 3) { createChart(); renderHeatmap(); }
+  if (idx === 1) { renderGarden(gState.records, gState.settings); }
 }
 
 var lbPeriod = 'today';
@@ -1248,7 +1240,8 @@ function renderLeaderboard() {
   var me = getMyAnimal();
   var myTotal = getTodayTotal(gState.records);
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
-  var myEntry = { emoji: me.emoji, name: me.name, todayMl: myTotal, streak: myStreak, isMe: true };
+  var myTodayRecs = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; });
+  var myEntry = { emoji: me.emoji, name: me.name, todayMl: myTotal, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
 
   function renderList(allUsers) {
     allUsers.sort(function(a, b) { return b.todayMl - a.todayMl; });

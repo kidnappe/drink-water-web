@@ -1,8 +1,8 @@
 ﻿{
-  "name": "喝水记录",
-  "short_name": "喝水记录",
+  "name": "喝杯水吧",
+  "short_name": "喝杯水吧",
   "description": "帮助您养成健康的饮水习惯",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f0f4fb",
   "theme_color": "#4A90E2",

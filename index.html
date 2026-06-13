@@ -15,7 +15,7 @@
     body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f0f4fb; color: #333; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
     .page { display: none; padding: 16px 16px 80px; }
     .page.active { display: block; }
-    .appbar { background: #4A90E2; color: #fff; padding: 16px; font-size: 1.125rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
+    .appbar { background: #4A90E2; color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
     .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; display: flex; border-top: 1px solid #e0e0e0; z-index: 100; }
     .bottom-nav button { flex: 1; border: none; background: none; padding: 10px 0 8px; font-size: 0.75rem; color: #999; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .2s; }
     .bottom-nav button .icon { font-size: 1.375rem; }
@@ -52,13 +52,13 @@
     .lb-me-tag { position: absolute; top: -6px; right: 8px; background: #4A90E2; color: #fff; font-size: 0.625rem; padding: 1px 8px; border-radius: 8px; font-weight: 600; }
     .lb-empty { text-align: center; padding: 30px 0; color: #999; font-size: 0.8125rem; }
     .lb-footer { font-size: 0.75rem; color: #aaa; text-align: center; padding: 10px; line-height: 1.6; }
-    .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 14px; }
-    .card-title { font-size: 0.9375rem; font-weight: 600; margin-bottom: 12px; }
+    .card { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 10px; }
+    .card-title { font-size: 0.9375rem; font-weight: 600; margin-bottom: 8px; }
     .garden { text-align: center; padding: 20px 16px 14px; }
     .plant-emoji { font-size: 4rem; transition: transform .5s; }
     .plant-name { font-size: 0.875rem; color: #666; margin-top: 4px; }
-    .progress-wrap { display: flex; flex-direction: column; align-items: center; padding: 12px 0; }
-    .cup-container { width: 110px; height: 140px; position: relative; }
+    .progress-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
+    .cup-container { width: 95px; height: 115px; position: relative; }
     .cup-body { width: 100%; height: 100%; border: 3px solid #4A90E2; border-top: none; border-radius: 0 0 14px 14px; position: relative; overflow: hidden; background: rgba(74,144,226,.04); }
     .cup-body::before { content: ''; position: absolute; top: -3px; left: -4px; right: -4px; height: 7px; background: #4A90E2; border-radius: 4px; }
     .water-area { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; transition: height 0.8s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
@@ -77,10 +77,10 @@
     .bubble:nth-child(4) { width: 3px; height: 3px; left: 35%; bottom: 20%; animation-delay: 0.3s; animation-duration: 3.6s; }
     @keyframes bubbleRise { 0% { transform: translateY(0) scale(1); opacity: 0.6; } 100% { transform: translateY(-80px) scale(0.6); opacity: 0; } }
     .cup-stats { text-align: center; margin-top: 8px; }
-    .cup-amount { font-size: 1.625rem; font-weight: 700; color: #333; }
-    .cup-unit { font-size: 0.8125rem; color: #999; }
-    .cup-label { font-size: 0.8125rem; color: #999; margin-top: 2px; }
-    .cup-remain { font-size: 0.8125rem; margin-top: 2px; }
+    .cup-amount { font-size: 1.375rem; font-weight: 700; color: #333; }
+    .cup-unit { font-size: 0.75rem; color: #999; }
+    .cup-label { font-size: 0.75rem; color: #999; margin-top: 1px; }
+    .cup-remain { font-size: 0.75rem; margin-top: 1px; }
     .track-wrap { width: 100%; max-width: 300px; margin: 14px auto 0; position: relative; }
     .track-bg { width: 100%; height: 10px; background: #e8edf3; border-radius: 5px; position: relative; overflow: hidden; }
     .track-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #4A90E2, #5BA3F5); transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); width: 0%; }
@@ -99,13 +99,13 @@
     @keyframes accessoryFloat { 0% { transform: translateY(0); } 100% { transform: translateY(-6px); } }
     .accessory.butterfly { animation: butterflyFlutter 1.6s ease-in-out infinite alternate; }
     @keyframes butterflyFlutter { 0% { transform: translate(0, 0) rotate(-5deg); } 100% { transform: translate(8px, -8px) rotate(5deg); } }
-    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-    .btn-water { flex: 1; min-width: 72px; padding: 10px 0; background: #4A90E2; color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .btn-water { flex: 1; min-width: 72px; padding: 9px 0; background: #4A90E2; color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
     .btn-water:active { opacity: .7; }
     .btn-water.custom { background: #FF9800; }
     .btn-water.small { flex: 0 0 auto; padding: 10px 16px; min-width: 60px; }
-    .mood-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .mood-btn { font-size: 1.375rem; padding: 6px 10px; border: 2px solid transparent; border-radius: 10px; background: #f5f7fa; cursor: pointer; transition: all .2s; line-height: 1; }
+    .mood-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .mood-btn { font-size: 1.25rem; padding: 4px 8px; border: 2px solid transparent; border-radius: 8px; background: #f5f7fa; cursor: pointer; transition: all .2s; line-height: 1; }
     .mood-btn:hover { background: #e8f0fe; transform: scale(1.1); }
     .mood-btn.active { border-color: #4A90E2; background: #e8f0fe; box-shadow: 0 0 0 2px rgba(74,144,226,.2); transform: scale(1.15); }
     .record-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
@@ -199,16 +199,20 @@
           <div class="cup-remain" id="todayRemainText">还差 2000 ml</div>
         </div>
     </div>
-    <div class="track-wrap" style="margin-top:10px;">
+    <div class="track-wrap" style="margin-top:6px;">
       <div class="track-runner" id="trackRunner">🏃</div>
       <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
       <div class="track-label"><span>0 ml</span><span id="trackGoalLabel">2000 ml</span></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">😊 当下心情 <span class="mood-help" onclick="showMoodHelp()" title="&#x5982;&#x4F55;&#x6DFB;&#x52A0;&#x5FC3;&#x60C5;">&#x2754;</span></div>
-    <div class="mood-row" id="moodRow">
-      <button class="mood-btn" data-mood="&#x1F60A;" onclick="selectMood(this)">&#x1F60A;</button>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleMood()">
+      <span>😊 当下心情 <span class="mood-help" onclick="event.stopPropagation();showMoodHelp()" title="&#x5982;&#x4F55;&#x6DFB;&#x52A0;&#x5FC3;&#x60C5;">&#x2754;</span></span>
+      <span id="moodToggleBtn" style="font-size:0.75rem;color:#4A90E2;">&#x6536;&#x8D77; &#x25B2;</span>
+    </div>
+    <div id="moodBody">
+      <div class="mood-row" id="moodRow">
+        <button class="mood-btn" data-mood="&#x1F60A;" onclick="selectMood(this)">&#x1F60A;</button>
       <button class="mood-btn" data-mood="&#x1F604;" onclick="selectMood(this)">&#x1F604;</button>
       <button class="mood-btn" data-mood="&#x1F970;" onclick="selectMood(this)">&#x1F970;</button>
       <button class="mood-btn" data-mood="&#x1F60C;" onclick="selectMood(this)">&#x1F60C;</button>
@@ -229,6 +233,7 @@
       <button class="mood-btn" data-mood="&#x1F634;" onclick="selectMood(this)">&#x1F634;</button>
       <button class="mood-btn" data-mood="&#x1F92A;" onclick="selectMood(this)">&#x1F92A;</button>
       <button class="mood-btn" data-mood="&#x1F630;" onclick="selectMood(this)">&#x1F630;</button>
+    </div>
     </div>
   </div>
   <div class="card">
@@ -842,6 +847,16 @@ function showMoodHelp() {
   );
 }
 
+/* 心情卡片折叠切换 */
+var _moodExpanded = true;
+function toggleMood() {
+  _moodExpanded = !_moodExpanded;
+  var body = document.getElementById('moodBody');
+  var btn = document.getElementById('moodToggleBtn');
+  if (body) { body.style.display = _moodExpanded ? '' : 'none'; }
+  if (btn) { btn.textContent = _moodExpanded ? '\u6536\u8d77 \u25B2' : '\u5C55\u5F00 \u25BC'; }
+}
+
 function exportData() {
   var data = { version: 1, exportedAt: new Date().toISOString(), records: loadRecords(), settings: loadSettings() };
   var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1399,6 +1414,7 @@ loadAll();
 </script>
 <script>
 if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem('dark_mode') || 'auto'); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('sw.js').catch(function() {}); }); }
 </script>
 </body>
 </html>

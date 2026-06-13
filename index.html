@@ -1,0 +1,1209 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="喝水记录">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>喝水记录</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f0f4fb; color: #333; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+    .page { display: none; padding: 16px 16px 80px; }
+    .page.active { display: block; }
+    .appbar { background: #4A90E2; color: #fff; padding: 16px; font-size: 1.125rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; display: flex; border-top: 1px solid #e0e0e0; z-index: 100; }
+    .bottom-nav button { flex: 1; border: none; background: none; padding: 10px 0 8px; font-size: 0.75rem; color: #999; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .2s; }
+    .bottom-nav button .icon { font-size: 1.375rem; }
+    .bottom-nav button.active { color: #4A90E2; }
+    .lb-card { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
+    .lb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .lb-header h3 { font-size: 0.9375rem; font-weight: 600; margin: 0; }
+    .lb-tabs { display: flex; gap: 4px; }
+    .lb-tabs button { padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.75rem; transition: all .2s; color: #666; }
+    .lb-tabs button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; }
+    .lb-list { display: flex; flex-direction: column; gap: 6px; }
+    .lb-item { display: flex; align-items: center; padding: 10px 12px; background: #f8faff; border-radius: 10px; border: 1px solid #eef3fb; }
+    .lb-item:nth-child(even) { background: #f5f9ff; }
+    .lb-rank { width: 28px; font-size: 0.875rem; font-weight: 700; color: #999; text-align: center; flex-shrink: 0; }
+    .lb-rank.gold { color: #FFB300; font-size: 1.125rem; }
+    .lb-rank.silver { color: #B0BEC5; font-size: 1rem; }
+    .lb-rank.bronze { color: #CD7F32; font-size: 1rem; }
+    .lb-avatar { font-size: 1.5rem; margin: 0 10px; flex-shrink: 0; }
+    .lb-info { flex: 1; min-width: 0; }
+    .lb-name { font-size: 0.8125rem; font-weight: 500; color: #333; }
+    .lb-streak { font-size: 0.6875rem; color: #999; margin-top: 2px; }
+    .lb-amount { font-size: 1rem; font-weight: 700; color: #4A90E2; flex-shrink: 0; text-align: right; }
+    .lb-unit { font-size: 0.6875rem; color: #aaa; font-weight: 400; }
+    .lb-me { background: #e8f0fe !important; border-color: #4A90E2; box-shadow: 0 0 0 2px rgba(74,144,226,.15); position: relative; }
+    .lb-me-tag { position: absolute; top: -6px; right: 8px; background: #4A90E2; color: #fff; font-size: 0.625rem; padding: 1px 8px; border-radius: 8px; font-weight: 600; }
+    .lb-empty { text-align: center; padding: 30px 0; color: #999; font-size: 0.8125rem; }
+    .lb-footer { font-size: 0.75rem; color: #aaa; text-align: center; padding: 10px; line-height: 1.6; }
+    .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 14px; }
+    .card-title { font-size: 0.9375rem; font-weight: 600; margin-bottom: 12px; }
+    .garden { text-align: center; padding: 20px 16px 14px; }
+    .plant-emoji { font-size: 4rem; transition: transform .5s; }
+    .plant-name { font-size: 0.875rem; color: #666; margin-top: 4px; }
+    .streak-bar { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+    .streak-dot { width: 28px; height: 28px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 0.8125rem; transition: all .3s; }
+    .streak-dot.done { background: #4CAF50; color: #fff; }
+    .progress-wrap { display: flex; flex-direction: column; align-items: center; padding: 12px 0; }
+    .cup-container { width: 110px; height: 140px; position: relative; }
+    .cup-body { width: 100%; height: 100%; border: 3px solid #4A90E2; border-top: none; border-radius: 0 0 14px 14px; position: relative; overflow: hidden; background: rgba(74,144,226,.04); }
+    .cup-body::before { content: ''; position: absolute; top: -3px; left: -4px; right: -4px; height: 7px; background: #4A90E2; border-radius: 4px; }
+    .water-area { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; transition: height 0.8s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
+    .water-fill-bg { position: absolute; bottom: 0; left: 0; right: 0; top: 0; background: linear-gradient(180deg, rgba(74,144,226,0.35) 0%, rgba(74,144,226,0.65) 100%); }
+    .cup-wave { position: absolute; top: -4px; left: 0; width: 100%; height: 8px; }
+    .cup-wave svg { position: absolute; width: 100%; height: 100%; }
+    .cup-wave .w1 { animation: hmWaveSway 1.6s ease-in-out infinite alternate; }
+    .cup-wave .w2 { animation: hmWaveSway 2s ease-in-out infinite alternate-reverse; }
+    .water-highlight { position: absolute; top: 0; left: 10%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); opacity: 0.4; }
+    @keyframes hmWaveSway { 0% { transform: translateX(-2px); } 100% { transform: translateX(2px); } }
+    .cup-handle { position: absolute; right: -12px; top: 24px; width: 14px; height: 28px; border: 3px solid #4A90E2; border-left: none; border-radius: 0 10px 10px 0; }
+    .bubble { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.35); animation: bubbleRise 2.4s ease-in infinite; }
+    .bubble:nth-child(1) { width: 6px; height: 6px; left: 20%; bottom: 10%; animation-delay: 0s; animation-duration: 2.8s; }
+    .bubble:nth-child(2) { width: 4px; height: 4px; left: 50%; bottom: 5%; animation-delay: 0.6s; animation-duration: 3.2s; }
+    .bubble:nth-child(3) { width: 5px; height: 5px; left: 70%; bottom: 15%; animation-delay: 1.2s; animation-duration: 2.6s; }
+    .bubble:nth-child(4) { width: 3px; height: 3px; left: 35%; bottom: 20%; animation-delay: 0.3s; animation-duration: 3.6s; }
+    @keyframes bubbleRise { 0% { transform: translateY(0) scale(1); opacity: 0.6; } 100% { transform: translateY(-80px) scale(0.6); opacity: 0; } }
+    .cup-stats { text-align: center; margin-top: 8px; }
+    .cup-amount { font-size: 1.625rem; font-weight: 700; color: #333; }
+    .cup-unit { font-size: 0.8125rem; color: #999; }
+    .cup-label { font-size: 0.8125rem; color: #999; margin-top: 2px; }
+    .cup-remain { font-size: 0.8125rem; margin-top: 2px; }
+    .track-wrap { width: 100%; max-width: 300px; margin: 14px auto 0; position: relative; }
+    .track-bg { width: 100%; height: 10px; background: #e8edf3; border-radius: 5px; position: relative; overflow: hidden; }
+    .track-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #4A90E2, #5BA3F5); transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); width: 0%; }
+    .track-runner { position: absolute; top: -8px; font-size: 1.375rem; transition: left 0.6s cubic-bezier(0.34,1.56,0.64,1); left: 0%; z-index: 2; animation: runnerBob 0.3s ease-in-out infinite alternate; transform: scaleX(-1); }
+    @keyframes runnerBob { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
+    .track-label { display: flex; justify-content: space-between; font-size: 0.6875rem; color: #999; margin-top: 2px; }
+    .confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 999; overflow: hidden; }
+    .confetti-piece { position: absolute; width: 8px; height: 8px; top: -10px; animation: confettiFall var(--duration) linear forwards; opacity: 0; }
+    @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+    .plant-accessories { position: relative; display: inline-block; }
+    .accessory { position: absolute; animation: accessoryFloat 2s ease-in-out infinite alternate; pointer-events: none; }
+    .accessory.star { top: -10px; right: -20px; font-size: 1.25rem; }
+    .accessory.butterfly { top: -24px; left: -10px; font-size: 1.125rem; animation-duration: 1.6s; }
+    .accessory.crown { top: -22px; left: 50%; transform: translateX(-50%); font-size: 1.375rem; }
+    .accessory.rainbow { top: -30px; left: -8px; font-size: 1.75rem; animation-duration: 3s; }
+    @keyframes accessoryFloat { 0% { transform: translateY(0); } 100% { transform: translateY(-6px); } }
+    .accessory.butterfly { animation: butterflyFlutter 1.6s ease-in-out infinite alternate; }
+    @keyframes butterflyFlutter { 0% { transform: translate(0, 0) rotate(-5deg); } 100% { transform: translate(8px, -8px) rotate(5deg); } }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .btn-water { flex: 1; min-width: 72px; padding: 10px 0; background: #4A90E2; color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+    .btn-water:active { opacity: .7; }
+    .btn-water.custom { background: #FF9800; }
+    .btn-water.small { flex: 0 0 auto; padding: 10px 16px; min-width: 60px; }
+    .record-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .record-item:last-child { border-bottom: none; }
+    .record-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(74,144,226,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.125rem; margin-right: 12px; }
+    .record-info { flex: 1; }
+    .record-amount { font-weight: 600; font-size: 0.9375rem; }
+    .record-time { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    .record-del { border: none; background: none; color: #e74c3c; font-size: 1.125rem; cursor: pointer; padding: 4px; }
+    .empty-state { text-align: center; padding: 20px; color: #999; font-size: 0.875rem; }
+    .chart-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+    .chart-toggle button { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.8125rem; transition: all .2s; }
+    .chart-toggle button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; }
+    .chart-box { width: 100%; height: 200px; display: block; }
+    .stat-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.875rem; }
+    .stat-row .label { color: #666; }
+    .stat-row .value { font-weight: 600; }
+    .setting-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+    .setting-item:last-child { border-bottom: none; }
+    .setting-icon { font-size: 1.25rem; margin-right: 14px; width: 24px; text-align: center; }
+    .setting-info { flex: 1; }
+    .setting-label { font-size: 0.875rem; }
+    .setting-desc { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    .setting-arrow { color: #ccc; font-size: 1rem; }
+    .setting-switch { position: relative; width: 44px; height: 24px; background: #ddd; border-radius: 12px; cursor: pointer; transition: .3s; flex-shrink: 0; }
+    .setting-switch.on { background: #4A90E2; }
+    .setting-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .3s; }
+    .setting-switch.on::after { transform: translateX(20px); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 16px; padding: 24px; width: 300px; max-width: 90%; }
+    .modal h3 { font-size: 1rem; margin-bottom: 14px; }
+    .modal input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9375rem; margin-bottom: 14px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-actions button { padding: 8px 20px; border-radius: 8px; border: none; font-size: 0.875rem; cursor: pointer; }
+    .modal-actions .btn-cancel { background: #e8edf3; color: #333; }
+    .modal-actions .btn-confirm { background: #4A90E2; color: #fff; }
+    .modal-actions .btn-danger { background: #e74c3c; color: #fff; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 0.8125rem; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    .heatmap-wrap { margin: 4px 0; }
+    .heatmap-month { font-size: 0.8125rem; color: #666; margin-bottom: 8px; font-weight: 600; }
+    .heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .heatmap-day { aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; color: #999; position: relative; overflow: hidden; }
+    .heatmap-day.has-data { color: #fff; font-weight: 600; }
+    .heatmap-day.today { outline: 2px solid #4A90E2; outline-offset: 1px; }
+    .heatmap-day .hm-tip { display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #333; color: #fff; font-size: 0.625rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 5; }
+    .heatmap-day:hover .hm-tip { display: block; }
+    .heatmap-day .hm-water-wrap { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; }
+    .heatmap-day .hm-water-fill { position: absolute; bottom: 0; left: 0; right: 0; transition: height .6s ease-out; background: linear-gradient(180deg, rgba(74,144,226,0.35) 0%, rgba(74,144,226,0.7) 100%); }
+    .heatmap-day .hm-wave { position: absolute; top: -4px; left: 0; width: 100%; height: 6px; }
+    .heatmap-day .hm-wave svg { position: absolute; width: 100%; height: 100%; }
+    .heatmap-day .hm-wave .w1 { animation: hmWaveSway 1.6s ease-in-out infinite alternate; }
+    .heatmap-day .hm-wave .w2 { animation: hmWaveSway 2s ease-in-out infinite alternate-reverse; }
+    .plant-pop { animation: plantPop .4s ease-out; }
+    @keyframes plantPop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    @media (max-width: 374px) { .btn-water.small { min-width: 48px; padding: 8px 10px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
+  </style>
+</head>
+<body>
+<div class="appbar" id="appbar">喝水记录 💧</div>
+<div class="page active" id="page-home">
+  <div class="card garden" id="gardenCard">
+    <div class="plant-emoji" id="plantEmoji">🌰</div>
+    <div class="plant-name" id="plantName">种子休眠中</div>
+    <div class="streak-bar" id="streakBar"></div>
+    <div style="font-size:0.75rem;color:#999;margin-top:4px;">连续达标 <span id="streakCount">0</span> 天</div>
+    <div style="font-size:0.75rem;color:#4A90E2;margin-top:6px;font-weight:500;" id="motivationMsg"></div>
+  </div>
+  <div class="card">
+    <div class="progress-wrap">
+      <div class="cup-container">
+        <div class="cup-body" id="cupBody">
+          <div class="water-area" id="waterArea">
+            <div class="cup-wave"><svg viewBox="0 0 110 8" preserveAspectRatio="none">
+              <path class="w1" d="M0,4 Q14,0 28,4 T56,4 T84,4 T110,4 V8 H0 Z" fill="rgba(74,144,226,.5)"/>
+              <path class="w2" d="M0,5 Q14,8 28,5 T56,5 T84,5 T110,5 V8 H0 Z" fill="rgba(74,144,226,.3)"/>
+            </svg></div>
+            <div class="water-fill-bg"></div>
+            <div class="water-highlight"></div>
+            <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+          </div>
+        </div>
+        <div class="cup-handle"></div>
+        <div class="overflow-wrap" id="overflowWrap"></div>
+      </div>
+      <div class="cup-stats">
+        <span class="cup-amount" id="todayAmount">0</span><span class="cup-unit">ml</span>
+        <div class="cup-label" id="todayGoalText">目标：2000 ml</div>
+        <div class="cup-remain" id="todayRemainText">还差 2000 ml</div>
+      </div>
+      <div class="track-wrap">
+        <div class="track-runner" id="trackRunner">🏃</div>
+        <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
+        <div class="track-label"><span>0 ml</span><span id="trackGoalLabel">2000 ml</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">选择水量</div>
+    <div class="btn-row">
+      <button class="btn-water small" onclick="addWater(250)">250ml</button>
+      <button class="btn-water small" onclick="addWater(350)">350ml</button>
+      <button class="btn-water small" onclick="addWater(500)">500ml</button>
+      <button class="btn-water small" onclick="addWater(1000)">1000ml</button>
+      <button class="btn-water small custom" onclick="showCustomDialog()">自定义</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+      <span class="card-title" style="margin-bottom:0;">今日记录</span>
+      <span style="font-size:0.8125rem;color:#999;" id="recordCount">共 0 条</span>
+    </div>
+    <div id="recordList"><div class="empty-state">今天还没有喝水记录哦～</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-history">
+  <div class="card">
+    <div class="chart-toggle" id="chartToggle">
+      <button class="active" onclick="switchChart(true)">本周</button>
+      <button onclick="switchChart(false)">本月</button>
+    </div>
+    <canvas class="chart-box" id="chartCanvas" width="400" height="200"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">统计摘要</div>
+    <div class="stat-row"><span class="label">日均喝水量</span><span class="value" id="statAvg">0 ml</span></div>
+    <div class="stat-row"><span class="label">最高日喝水量</span><span class="value" id="statMax">0 ml</span></div>
+    <div class="stat-row"><span class="label">最低日喝水量</span><span class="value" id="statMin">0 ml</span></div>
+    <div class="stat-row"><span class="label">达标天数</span><span class="value" id="statGoal">0 天</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 喝水日历</div>
+    <div class="heatmap-wrap" id="heatmapWrap"></div>
+  </div>
+</div>
+
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="setting-item" onclick="showGoalDialog()">
+      <span class="setting-icon">🎯</span>
+      <div class="setting-info"><div class="setting-label">每日目标</div><div class="setting-desc" id="settingGoal">2000 ml</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="showCustomAmountDialog()">
+      <span class="setting-icon">💧</span>
+      <div class="setting-info"><div class="setting-label">自定义水量</div><div class="setting-desc" id="settingCustom">250 ml</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item">
+      <span class="setting-icon">🔔</span>
+      <div class="setting-info"><div class="setting-label">喝水提醒</div><div class="setting-desc" id="settingRemindDesc">已关闭</div></div>
+      <div class="setting-switch" id="remindSwitch" onclick="toggleReminder()"></div>
+    </div>
+    <div class="setting-item" onclick="toggleDarkMode()">
+      <span class="setting-icon">🌙</span>
+      <div class="setting-info"><div class="setting-label">深色模式</div><div class="setting-desc" id="settingDarkDesc">跟随系统</div></div>
+      <div class="setting-switch" id="darkSwitch" style="flex-shrink:0;"></div>
+    </div>
+    <div class="setting-item" onclick="showAvatarDialog()">
+      <span class="setting-icon" id="settingAvatarPreview">🐼</span>
+      <div class="setting-info"><div class="setting-label">我的头像</div><div class="setting-desc" id="settingAvatarName">点击更换</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="showNicknameDialog()">
+      <span class="setting-icon">✏️</span>
+      <div class="setting-info"><div class="setting-label">我的昵称</div><div class="setting-desc" id="settingNickname">未设置</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="setting-item" onclick="showEffectsGuide()">
+      <span class="setting-icon">✨</span>
+      <div class="setting-info"><div class="setting-label">特效说明</div><div class="setting-desc">查看所有动画效果的触发条件</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="showAboutDialog()">
+      <span class="setting-icon">ℹ️</span>
+      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc">喝水记录 v1.0</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="setting-item" onclick="showSupabaseDialog()">
+      <span class="setting-icon">🌐</span>
+      <div class="setting-info"><div class="setting-label">在线排行榜</div><div class="setting-desc" id="settingSupabaseDesc">未配置</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="setting-item" onclick="exportData()">
+      <span class="setting-icon">📤</span>
+      <div class="setting-info"><div class="setting-label">导出数据</div><div class="setting-desc">备份喝水记录到 JSON 文件</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="document.getElementById('importInput').click()">
+      <span class="setting-icon">📥</span>
+      <div class="setting-info"><div class="setting-label">导入数据</div><div class="setting-desc">从 JSON 文件恢复数据（将覆盖当前数据）</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+  <button style="width:100%;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:10px;font-size:0.9375rem;font-weight:600;cursor:pointer;" onclick="showResetDialog()">重置所有数据</button>
+</div>
+
+<div class="page" id="page-leaderboard">
+  <div class="lb-card">
+    <div class="lb-header"><h3>🏆 喝水排行榜</h3>
+      <div class="lb-tabs" id="lbTabs">
+        <button class="active" onclick="switchLB('today')">今日</button>
+        <button onclick="switchLB('week')">本周</button>
+        <button onclick="switchLB('month')">本月</button>
+      </div>
+    </div>
+    <div class="lb-list" id="lbList"><div class="lb-empty">加载中...</div></div>
+  </div>
+  <div class="lb-footer">⭐ 喝水越多排名越高<br>连续达标天数相同时按总水量排序</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent">
+    <h3 id="modalTitle">标题</h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="bottom-nav">
+  <button class="active" onclick="switchTab(0)"><span class="icon">🏠</span> 首页</button>
+  <button onclick="switchTab(1)"><span class="icon">🏆</span> 排行</button>
+  <button onclick="switchTab(2)"><span class="icon">📊</span> 历史</button>
+  <button onclick="switchTab(3)"><span class="icon">⚙️</span> 设置</button>
+</nav>
+
+<script>
+var STORAGE_KEY = 'drink_water_data';
+var SETTINGS_KEY = 'drink_water_settings';
+var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
+var ANON_USER_KEY = 'drink_water_user_id';
+
+/* ── Supabase 集成（排行榜在线版） ── */
+function getAnonUserId() {
+  var id = localStorage.getItem(ANON_USER_KEY);
+  if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem(ANON_USER_KEY, id); }
+  return id;
+}
+
+function loadSupabaseConfig() {
+  try {
+    var raw = localStorage.getItem(SUPABASE_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : { url: '', key: '' };
+  } catch(e) { return { url: '', key: '' }; }
+}
+
+function saveSupabaseConfig(cfg) {
+  localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+function isSupabaseConfigured() {
+  var cfg = loadSupabaseConfig();
+  return cfg.url && cfg.key && cfg.url.length > 10 && cfg.key.length > 10;
+}
+
+/* 尝试创建 Supabase 客户端；配置为空时返回 null */
+var _sbClient = null;
+function getSupabaseClient() {
+  if (_sbClient) return _sbClient;
+  if (!isSupabaseConfigured()) return null;
+  if (typeof supabase === 'undefined') return null;
+  var cfg = loadSupabaseConfig();
+  try {
+    _sbClient = supabase.createClient(cfg.url, cfg.key);
+    return _sbClient;
+  } catch(e) { return null; }
+}
+
+/* 将今日数据同步到 Supabase 排行榜（upsert） */
+function syncTodayToLeaderboard() {
+  if (!isSupabaseConfigured()) return Promise.resolve();
+  var client = getSupabaseClient();
+  if (!client) return Promise.resolve();
+  var me = getMyAnimal();
+  var total = getTodayTotal(gState.records);
+  var streak = calcStreak(gState.records, gState.settings.dailyGoal);
+  return client
+    .from('leaderboard')
+    .upsert({
+      user_id: getAnonUserId(),
+      nickname: me.name,
+      avatar_idx: me.idx,
+      today_ml: total,
+      streak: streak,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
+    .then(function(resp) {
+      if (resp.error) console.warn('Sync to leaderboard failed:', resp.error);
+    });
+}
+
+/* 从 Supabase 获取在线排行榜（最多 20 条） */
+function fetchOnlineLeaderboard() {
+  if (!isSupabaseConfigured()) return Promise.resolve(null);
+  var client = getSupabaseClient();
+  if (!client) return Promise.resolve(null);
+  return client
+    .from('leaderboard')
+    .select('*')
+    .order('today_ml', { ascending: false })
+    .limit(20)
+    .then(function(resp) {
+      if (resp.error) { console.warn('Fetch leaderboard failed:', resp.error); return null; }
+      return resp.data || null;
+    });
+}
+/* ── 结束 Supabase 集成 ── */
+
+function getDefaultSettings() {
+  return { dailyGoal: 2000, customAmount: 250, enableReminder: false };
+}
+
+function loadSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) { return Object.assign({}, getDefaultSettings(), JSON.parse(raw)); }
+    return getDefaultSettings();
+  } catch(e) { return getDefaultSettings(); }
+}
+
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+function loadRecords() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveRecords(rs) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(rs));
+}
+
+function getDateKey(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function getTodayRecords(records) {
+  var todayKey = getDateKey(new Date());
+  return records.filter(function(r) { return r.dateKey === todayKey; });
+}
+
+function getTodayTotal(records) {
+  return getTodayRecords(records).reduce(function(s, r) { return s + r.amount; }, 0);
+}
+
+function getWeekStats(records) {
+  var now = new Date();
+  var map = {};
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(now);
+    d.setDate(d.getDate() - i);
+    map[getDateKey(d)] = 0;
+  }
+  records.forEach(function(r) { if (r.dateKey in map) { map[r.dateKey] += r.amount; } });
+  return map;
+}
+
+function getMonthStats(records) {
+  var now = new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  var days = new Date(year, month + 1, 0).getDate();
+  var map = {};
+  for (var i = 1; i <= days; i++) {
+    var d = new Date(year, month, i);
+    map[getDateKey(d)] = 0;
+  }
+  records.forEach(function(r) { if (r.dateKey in map) { map[r.dateKey] += r.amount; } });
+  return map;
+}
+
+var PLANT_STAGES = [
+  { emoji: '\u{1F330}', name: '\u79cd\u5b50\u4f11\u7720\u4e2d', minDays: 0 },
+  { emoji: '\u{1F331}', name: '\u5ae9\u82bd\u7834\u571f', minDays: 1 },
+  { emoji: '\u{1F33F}', name: '\u5065\u58ee\u6210\u957f', minDays: 3 },
+  { emoji: '\u{1F33B}', name: '\u542b\u82de\u5f85\u653e', minDays: 7 },
+  { emoji: '\u{1F333}', name: '\u679d\u7e41\u53f6\u8302', minDays: 14 },
+  { emoji: '\u{1F338}', name: '\u82b1\u5f00\u6ee1\u6811', minDays: 30 }
+];
+
+function calcStreak(records, dailyGoal) {
+  var today = new Date();
+  var streak = 0;
+  for (var i = 0; ; i++) {
+    var d = new Date(today);
+    d.setDate(d.getDate() - i);
+    var key = getDateKey(d);
+    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
+    if (dayTotal >= dailyGoal) { streak++; } else { break; }
+  }
+  return streak;
+}
+
+function getPlantStage(streak) {
+  var stage = PLANT_STAGES[0];
+  for (var i = 0; i < PLANT_STAGES.length; i++) {
+    if (streak >= PLANT_STAGES[i].minDays) { stage = PLANT_STAGES[i]; }
+  }
+  return stage;
+}
+
+function calcExcessStreak(records, dailyGoal) {
+  var today = new Date();
+  var streak = 0;
+  for (var i = 0; ; i++) {
+    var d = new Date(today);
+    d.setDate(d.getDate() - i);
+    var key = getDateKey(d);
+    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
+    if (dayTotal > dailyGoal) { streak++; } else { break; }
+  }
+  return streak;
+}
+
+function getExcessAccessories(excessStreak) {
+  var list = [];
+  if (excessStreak >= 3)  { list.push({ emoji: '\u2B50', cls: 'accessory star' }); }
+  if (excessStreak >= 7)  { list.push({ emoji: '\u{1F98B}', cls: 'accessory butterfly' }); }
+  if (excessStreak >= 14) { list.push({ emoji: '\u{1F451}', cls: 'accessory crown' }); }
+  if (excessStreak >= 30) { list.push({ emoji: '\u{1F308}', cls: 'accessory rainbow' }); }
+  return list;
+}
+
+function renderGarden(records, settings) {
+  var streak = calcStreak(records, settings.dailyGoal);
+  var stage = getPlantStage(streak);
+  var excessStreak = calcExcessStreak(records, settings.dailyGoal);
+  var accessories = getExcessAccessories(excessStreak);
+  var plantHtml = stage.emoji;
+  if (accessories.length > 0) {
+    plantHtml = '<span class="plant-accessories">' + stage.emoji;
+    accessories.forEach(function(a) { plantHtml += '<span class="' + a.cls + '">' + a.emoji + '</span>'; });
+    plantHtml += '</span>';
+  }
+  document.getElementById('plantEmoji').innerHTML = plantHtml;
+  document.getElementById('plantName').textContent = stage.name;
+  document.getElementById('streakCount').textContent = streak;
+  var msgs = ['\u5f00\u59cb\u559d\u6c34\u5427\uff01\u6bcf\u4e00\u53e3\u90fd\u662f\u5bf9\u8eab\u4f53\u7684\u7231\u2764\ufe0f', '\u4eca\u5929\u4e5f\u8981\u52a0\u6cb9\u559d\u6c34\u54e6\uff01', '\u8bb0\u5f97\u5b9a\u65f6\u8865\u5145\u6c34\u5206\u54e6 \u{1F4A7}', '\u6c34\u662f\u6700\u597d\u7684\u996e\u6599\uff0c\u575a\u6301\u5c31\u662f\u80dc\u5229\uff01'];
+  var idx = Math.floor(Math.random() * msgs.length);
+  var el = document.getElementById('motivationMsg');
+  if (el) { el.textContent = msgs[idx]; }
+  var bar = document.getElementById('streakBar');
+  bar.innerHTML = '';
+  var today = new Date();
+  var weekDays = ['\u65e5', '\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d'];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(today);
+    d.setDate(d.getDate() - i);
+    var key = getDateKey(d);
+    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
+    var dot = document.createElement('div');
+    dot.className = 'streak-dot' + (dayTotal >= settings.dailyGoal ? ' done' : '');
+    dot.textContent = weekDays[d.getDay()];
+    bar.appendChild(dot);
+  }
+}
+var lastGoalMet = false;
+
+function renderCupAndTrack(total, goal) {
+  var pct = Math.min(total / goal, 1);
+  var isMet = total >= goal;
+  document.getElementById('waterArea').style.height = (pct * 100) + '%';
+  document.getElementById('trackFill').style.width = (pct * 100) + '%';
+  var runner = document.getElementById('trackRunner');
+  runner.style.left = (pct * 100) + '%';
+  runner.textContent = isMet ? '\u{1F3C1}' : '\u{1F3C3}';
+  document.getElementById('todayAmount').textContent = total;
+  document.getElementById('todayGoalText').textContent = '\u76ee\u6807\uff1a' + goal + ' ml';
+  var remain = Math.max(goal - total, 0);
+  var remainEl = document.getElementById('todayRemainText');
+  remainEl.textContent = isMet ? '\u{1F389} \u4eca\u65e5\u76ee\u6807\u5df2\u8fbe\u6210\uff01' : '\u8fd8\u5dee ' + remain + ' ml';
+  remainEl.style.color = isMet ? '#e74c3c' : '#666';
+  document.getElementById('trackGoalLabel').textContent = goal + ' ml';
+  if (isMet && !lastGoalMet) { setTimeout(function() { fireConfetti(); }, 200); }
+  lastGoalMet = isMet;
+  if (isMet) {
+    var pe = document.getElementById('plantEmoji');
+    if (pe) { pe.classList.remove('plant-pop'); void pe.offsetWidth; pe.classList.add('plant-pop'); }
+  }
+}
+
+function fireConfetti() {
+  var container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+  var colors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#e91e63','#ff6b6b','#ffd93d'];
+  var shapes = ['\u25A0','\u25CF','\u25B2','\u2605','\u2666','\u2665'];
+  for (var i = 0; i < 80; i++) {
+    var piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.textContent = shapes[Math.floor(Math.random() * shapes.length)];
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.color = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.fontSize = (6 + Math.random() * 10) + 'px';
+    piece.style.setProperty('--duration', (1.5 + Math.random() * 2) + 's');
+    piece.style.animationDelay = Math.random() * 0.8 + 's';
+    container.appendChild(piece);
+  }
+  setTimeout(function() { if (container.parentNode) { container.parentNode.removeChild(container); } }, 4000);
+}
+
+function renderRecords(todayRecords) {
+  var list = document.getElementById('recordList');
+  document.getElementById('recordCount').textContent = '\u5171 ' + todayRecords.length + ' \u6761';
+  if (todayRecords.length === 0) {
+    list.innerHTML = '<div class="empty-state">\u4eca\u5929\u8fd8\u6ca1\u6709\u559d\u6c34\u8bb0\u5f55\u54e6\uff5e</div>';
+    return;
+  }
+  list.innerHTML = '';
+  var reversed = todayRecords.slice().reverse();
+  reversed.forEach(function(r) {
+    var d = new Date(r.dateTime);
+    var dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var timeStr = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    var div = document.createElement('div');
+    div.className = 'record-item';
+    div.innerHTML = '<div class="record-icon">\u{1F4A7}</div><div class="record-info"><div class="record-amount">' + r.amount + ' ml</div><div class="record-time">' + dateStr + ' ' + timeStr + '</div></div><button class="record-del" onclick="deleteRecord(\'' + r.id + '\')">\u2715</button>';
+    list.appendChild(div);
+  });
+}
+
+function triggerExcessEffect(level) {
+  setTimeout(function() {
+    if (level === 1) { triggerGlow(); fireConfetti(); triggerOverflow(1); }
+    else if (level === 2) { triggerOverflow(2); triggerSplash(8);
+      var cb = document.querySelector('.cup-body');
+      if (cb) { cb.classList.add('cup-shake'); setTimeout(function() { cb.classList.remove('cup-shake'); }, 500); }
+    } else if (level === 3) { triggerOverflow(3); triggerSplash(18); triggerStars(6); }
+    else { triggerOverflow(4); triggerSplash(30); triggerStars(12);
+      var cb2 = document.querySelector('.cup-body');
+      if (cb2) { cb2.classList.add('cup-shake'); setTimeout(function() { cb2.classList.remove('cup-shake'); }, 500); }
+    }
+  }, 300);
+}
+
+function triggerSplash(count) {
+  var cup = document.querySelector('.cup-container');
+  if (!cup) return;
+  var rect = cup.getBoundingClientRect();
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top + 4;
+  for (var i = 0; i < count; i++) {
+    var drop = document.createElement('div');
+    var size = 4 + Math.random() * 6;
+    var angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.4;
+    var dist = 50 + Math.random() * 100;
+    var dx = Math.cos(angle) * dist;
+    var dy = Math.sin(angle) * dist;
+    drop.style.cssText = 'position:fixed; left:' + cx + 'px; top:' + cy + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:rgba(74,144,226,' + (0.5+Math.random()*0.4) + '); pointer-events:none; z-index:999;';
+    document.body.appendChild(drop);
+    drop.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 },{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0.2)', opacity: 0 }], { duration: 600 + Math.random() * 400, fill: 'forwards', easing: 'ease-out' });
+    setTimeout(function() { if (drop.parentNode) { drop.remove(); } }, 1200);
+  }
+}
+
+function triggerStars(count) {
+  var runner = document.getElementById('trackRunner');
+  if (!runner) return;
+  var rect = runner.getBoundingClientRect();
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top;
+  for (var i = 0; i < count; i++) {
+    var star = document.createElement('div');
+    var angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
+    var dist = 30 + Math.random() * 60;
+    var dx = Math.cos(angle) * dist;
+    var dy = Math.sin(angle) * dist;
+    star.style.cssText = 'position:fixed; left:' + cx + 'px; top:' + cy + 'px; font-size:' + (12+Math.random()*8) + 'px; pointer-events:none; z-index:999;';
+    star.textContent = '\u2B50';
+    document.body.appendChild(star);
+    star.animate([{ transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1 },{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0) rotate(360deg)', opacity: 0 }], { duration: 800 + Math.random() * 400, fill: 'forwards', easing: 'ease-out' });
+    setTimeout(function() { if (star.parentNode) { star.remove(); } }, 1500);
+  }
+}
+
+function triggerGlow() {
+  var cup = document.querySelector('.cup-container');
+  if (!cup) return;
+  var el = document.createElement('div');
+  el.className = 'cup-glow active';
+  cup.appendChild(el);
+  setTimeout(function() { if (el.parentNode) { el.remove(); } }, 2500);
+}
+
+function triggerOverflow(intensity) {
+  var wrap = document.getElementById('overflowWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  wrap.classList.add('active');
+  var count = intensity * 4;
+  for (var i = 0; i < count; i++) {
+    var fall = document.createElement('div');
+    fall.className = 'overflow-fall';
+    fall.style.cssText = 'left:' + (Math.random() * 100) + '%; --od:' + (0.6+Math.random()*0.6) + 's; animation-delay:' + (Math.random()*0.8) + 's;';
+    wrap.appendChild(fall);
+  }
+  for (var i = 0; i < Math.min(intensity, 4); i++) {
+    var ripple = document.createElement('div');
+    ripple.className = 'overflow-ripple';
+    ripple.style.cssText = 'left:' + (15+Math.random()*70) + '%; --or:' + (0.6+Math.random()*0.4) + 's; animation-delay:' + (i*0.2) + 's;';
+    wrap.appendChild(ripple);
+  }
+  setTimeout(function() { wrap.classList.remove('active'); wrap.innerHTML = ''; }, 2500);
+}
+var gState = { records: [], settings: getDefaultSettings(), chartWeek: true, chartInstance: null, todayExcessCount: 0, lastExcessDateKey: '' };
+
+function exportData() {
+  var data = { version: 1, exportedAt: new Date().toISOString(), records: loadRecords(), settings: loadSettings() };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('\u6570\u636e\u5df2\u5bfc\u51fa');
+}
+
+function importData(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (data.records && Array.isArray(data.records)) {
+        saveRecords(data.records); gState.records = data.records;
+        if (data.settings) { saveSettings(data.settings); gState.settings = data.settings; }
+        refreshUI(); showToast('\u6570\u636e\u5bfc\u5165\u6210\u529f');
+      } else { showToast('\u6587\u4ef6\u683c\u5f0f\u65e0\u6548'); }
+    } catch(e) { showToast('\u6587\u4ef6\u89e3\u6790\u5931\u8d25'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function showResetDialog() {
+  showModal('\u786e\u8ba4\u91cd\u7f6e', '\u786e\u5b9a\u8981\u91cd\u7f6e\u6240\u6709\u6570\u636e\u5417\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u6062\u590d\u3002', [
+    { text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+    { text: '\u786e\u8ba4\u91cd\u7f6e', cls: 'btn-danger', action: function() { saveRecords([]); gState.records = []; hideModal(); refreshUI(); showToast('\u6570\u636e\u5df2\u91cd\u7f6e'); } }
+  ]);
+}
+
+function showEffectsGuide() {
+  showModal('\u7279\u6548\u8bf4\u660e', '<div style="font-size:0.8125rem;line-height:1.8;"><b>\u8fbe\u6807\u70df\u82b1</b><br>\u4eca\u65e5\u559d\u6c34\u91cf\u8fbe\u5230\u76ee\u6807\u65f6\u89e6\u53d1<br><br><b>\u8d85\u989d\u6c34\u82b1</b><br>\u8fbe\u6807\u540e\u7ee7\u7eed\u559d\u6c34\u89e6\u53d1</div>', [{ text: '\u77e5\u9053\u4e86', cls: 'btn-confirm', action: hideModal }]);
+}
+
+function showAboutDialog() {
+  showModal('\u5173\u4e8e\u5e94\u7528', '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;"><div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div><b>\u559d\u6c34\u8bb0\u5f55 v1.0</b><br>\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef</div>', [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
+}
+
+/* ── Supabase 配置对话框 ── */
+function showSupabaseDialog() {
+  var cfg = loadSupabaseConfig();
+  var isConnected = isSupabaseConfigured();
+  var statusHtml = isConnected
+    ? '<div style="color:#4CAF50;margin-bottom:12px;font-weight:600;">✅ 已配置</div>'
+    : '<div style="color:#999;margin-bottom:12px;">⚠️ 未配置 — 排行榜将使用本地模拟数据</div>';
+  var bodyHtml = statusHtml +
+    '<div style="margin-bottom:8px;"><label style="font-size:0.8125rem;color:#666;">Supabase URL</label>' +
+    '<input type="text" id="sbUrlInput" value="' + (cfg.url || '') + '" placeholder="https://xxxxx.supabase.co" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.8125rem;margin-top:4px;"></div>' +
+    '<div style="margin-bottom:8px;"><label style="font-size:0.8125rem;color:#666;">Anon Key</label>' +
+    '<input type="text" id="sbKeyInput" value="' + (cfg.key || '') + '" placeholder="eyJhbGciOiJIUzI1NiIs..." style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.8125rem;margin-top:4px;"></div>' +
+    '<div style="margin-top:8px;font-size:0.75rem;color:#999;line-height:1.5;">' +
+    '📖 在 <a href="https://supabase.com" target="_blank" style="color:#4A90E2;">supabase.com</a> 免费注册，创建一个项目后，在 Settings → API 中找到 Project URL 和 anon/public key。</div>';
+  showModal('在线排行榜设置', bodyHtml, [
+    { text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+    { text: '\u6d4b\u8bd5\u8fde\u63a5', cls: 'btn-confirm', action: function() { testSupabaseConnection(); } }
+  ]);
+}
+
+function testSupabaseConnection() {
+  var url = document.getElementById('sbUrlInput').value.trim();
+  var key = document.getElementById('sbKeyInput').value.trim();
+  if (!url || !key) { showToast('\u8bf7\u586b\u5199\u5b8c\u6574\u7684 URL \u548c Key'); return; }
+  /* 临时保存并创建客户端测试 */
+  saveSupabaseConfig({ url: url, key: key });
+  _sbClient = null;
+  var client = getSupabaseClient();
+  if (!client) { showToast('\u8fde\u63a5\u5931\u8d25\uff1a\u65e0\u6cd5\u521b\u5efa\u5ba2\u6237\u7aef'); return; }
+  client.from('leaderboard').select('count', { count: 'exact', head: true }).then(function(resp) {
+    if (resp.error) {
+      showToast('\u8fde\u63a5\u5931\u8d25\uff1a' + (resp.error.message || '\u67e5\u8be2\u9519\u8bef'));
+      /* 恢复旧配置 */
+      saveSupabaseConfig({ url: '', key: '' });
+      _sbClient = null;
+    } else {
+      showToast('\u2705 \u8fde\u63a5\u6210\u529f\uff01\u6392\u884c\u699c\u5df2\u542f\u7528\u5728\u7ebf\u6a21\u5f0f');
+      hideModal();
+      updateSettingsUI();
+    }
+  });
+}
+/* ── 结束 Supabase 配置对话框 ── */
+
+function loadAll() {
+  gState.settings = loadSettings();
+  gState.records = loadRecords();
+  applyDarkMode(localStorage.getItem('dark_mode') || 'auto');
+  var saved = loadSettings();
+  if (saved.enableReminder && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    if (typeof startReminder === 'function') { startReminder(); }
+  }
+  var todayKey = getDateKey(new Date());
+  if (gState.lastExcessDateKey !== todayKey) { gState.todayExcessCount = 0; gState.lastExcessDateKey = todayKey; }
+  refreshUI();
+}
+
+function refreshUI() {
+  renderGarden(gState.records, gState.settings);
+  var todayTotal = getTodayTotal(gState.records);
+  renderCupAndTrack(todayTotal, gState.settings.dailyGoal);
+  renderRecords(getTodayRecords(gState.records));
+  updateSettingsUI();
+  updateStats();
+}
+
+function addWater(amount) {
+  var todayKey = getDateKey(new Date());
+  var todayTotal = getTodayTotal(gState.records);
+  var wasAlreadyAtGoal = todayTotal >= gState.settings.dailyGoal;
+  gState.records.push({
+    id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)),
+    amount: amount,
+    dateTime: new Date().toISOString(),
+    dateKey: todayKey
+  });
+  saveRecords(gState.records);
+  syncTodayToLeaderboard(); /* 同步到在线排行榜 */
+  if (wasAlreadyAtGoal) { gState.todayExcessCount++; gState.lastExcessDateKey = todayKey; triggerExcessEffect(gState.todayExcessCount); }
+  refreshUI();
+  showToast('\u5df2\u8bb0\u5f55 ' + amount + ' ml \u559d\u6c34');
+}
+
+function deleteRecord(id) {
+  gState.records = gState.records.filter(function(r) { return r.id !== id; });
+  saveRecords(gState.records);
+  syncTodayToLeaderboard(); /* 同步更新后的今日总量到在线排行榜 */
+  refreshUI();
+  showToast('\u8bb0\u5f55\u5df2\u5220\u9664');
+}
+
+function showCustomDialog() {
+  var curr = gState.settings.customAmount || 250;
+  showModal('\u81ea\u5b9a\u4e49\u6c34\u91cf',
+    '<input type="number" id="customAmountInput" value="' + curr + '" placeholder="\u8f93\u5165\u6c34\u91cf" min="1" max="2000" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:-8px;margin-bottom:6px;">\u8303\u56f4\uff1a1-2000ml</div>',
+    [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+     { text: '\u8bb0\u5f55', cls: 'btn-confirm', action: function() {
+       var val = parseInt(document.getElementById('customAmountInput').value);
+       if (val && val > 0 && val <= 2000) { hideModal(); addWater(val); }
+       else { showToast('\u8bf7\u8f93\u5165\u6709\u6548\u6c34\u91cf\uff081-2000ml\uff09'); }
+     }}]);
+  setTimeout(function() { var e = document.getElementById('customAmountInput'); if (e) e.focus(); }, 100);
+}
+function getChartData() {
+  var stats = gState.chartWeek ? getWeekStats(gState.records) : getMonthStats(gState.records);
+  var entries = Object.entries(stats);
+  if (entries.length === 0) return null;
+  var labels = [], data = [];
+  for (var i = 0; i < entries.length; i++) {
+    var d = new Date(entries[i][0] + 'T00:00:00');
+    labels.push((d.getMonth()+1) + '/' + d.getDate());
+    data.push(entries[i][1]);
+  }
+  return { labels: labels, data: data, goal: gState.settings.dailyGoal };
+}
+
+function createChart() {
+  if (gState.chartInstance) { gState.chartInstance.destroy(); gState.chartInstance = null; }
+  var canvas = document.getElementById('chartCanvas');
+  if (!canvas) return;
+  var chartData = getChartData();
+  if (!chartData) return;
+  canvas.width = canvas.parentElement.clientWidth - 2;
+  canvas.height = 200;
+  gState.chartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: chartData.labels,
+      datasets: [
+        { label: '\u559d\u6c34\u91cf (ml)', data: chartData.data,
+          backgroundColor: chartData.data.map(function(v) { return v >= chartData.goal ? 'rgba(76,175,80,0.7)' : 'rgba(74,144,226,0.7)'; }),
+          borderColor: chartData.data.map(function(v) { return v >= chartData.goal ? '#4CAF50' : '#4A90E2'; }),
+          borderWidth: 1, borderRadius: 4, barPercentage: 0.4 },
+        { label: '\u76ee\u6807\u7ebf', data: chartData.data.map(function() { return chartData.goal; }), type: 'line',
+          borderColor: '#e74c3c', borderWidth: 2, borderDash: [5,5], pointRadius: 0, fill: false, tension: 0 }
+      ]
+    },
+    options: { responsive: false, animation: { duration: 0 }, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { offset: true, ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } } },
+      layout: { padding: { right: 8 } } }
+  });
+}
+
+function switchChart(isWeek) {
+  gState.chartWeek = isWeek;
+  var btns = document.querySelectorAll('#chartToggle button');
+  btns[0].classList.toggle('active', isWeek);
+  btns[1].classList.toggle('active', !isWeek);
+  createChart();
+}
+
+function updateStats() {
+  var stats = gState.chartWeek ? getWeekStats(gState.records) : getMonthStats(gState.records);
+  var values = Object.values(stats);
+  var total = 0;
+  for (var i = 0; i < values.length; i++) { total += values[i]; }
+  var avg = values.length > 0 ? Math.round(total / values.length) : 0;
+  var maxVal = values.length > 0 ? Math.max.apply(null, values) : 0;
+  var nonZero = values.filter(function(v) { return v > 0; });
+  var minVal = nonZero.length > 0 ? Math.min.apply(null, nonZero) : 0;
+  var goalDays = values.filter(function(v) { return v >= gState.settings.dailyGoal; }).length;
+  document.getElementById('statAvg').textContent = avg + ' ml';
+  document.getElementById('statMax').textContent = maxVal + ' ml';
+  document.getElementById('statMin').textContent = minVal + ' ml';
+  document.getElementById('statGoal').textContent = goalDays + ' \u5929';
+}
+
+function updateSettingsUI() {
+  var s = gState.settings;
+  document.getElementById('settingGoal').textContent = s.dailyGoal + ' ml';
+  document.getElementById('settingCustom').textContent = s.customAmount + ' ml';
+  document.getElementById('remindSwitch').className = 'setting-switch' + (s.enableReminder ? ' on' : '');
+  document.getElementById('settingRemindDesc').textContent = s.enableReminder ? '\u5df2\u5f00\u542f' : '\u5df2\u5173\u95ed';
+  var darkMode = localStorage.getItem('dark_mode') || 'auto';
+  document.getElementById('darkSwitch').className = 'setting-switch' + (darkMode === 'on' ? ' on' : '');
+  var darkLabels = { on: '\u5df2\u5f00\u542f', off: '\u5df2\u5173\u95ed', auto: '\u8ddf\u968f\u7cfb\u7edf' };
+  document.getElementById('settingDarkDesc').textContent = darkLabels[darkMode] || '\u8ddf\u968f\u7cfb\u7edf';
+  var me = getMyAnimal();
+  document.getElementById('settingAvatarPreview').textContent = me.emoji;
+  document.getElementById('settingAvatarName').textContent = me.name;
+  document.getElementById('settingNickname').textContent = localStorage.getItem('lb_nickname') || '\u672a\u8bbe\u7f6e';
+  var sbDesc = document.getElementById('settingSupabaseDesc');
+  if (sbDesc) { sbDesc.textContent = isSupabaseConfigured() ? '\u2705 \u5df2\u8fde\u63a5' : '\u26a0\ufe0f \u672a\u914d\u7f6e'; }
+}
+
+function showGoalDialog() {
+  showModal('\u8bbe\u7f6e\u6bcf\u65e5\u76ee\u6807',
+    '<input type="number" id="goalInput" value="' + gState.settings.dailyGoal + '" placeholder="\u76ee\u6807\uff08\u6beb\u5347\uff09" min="1" max="10000" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:-8px;margin-bottom:6px;">\u8303\u56f4\uff1a1-10000ml</div>',
+    [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+     { text: '\u4fdd\u5b58', cls: 'btn-confirm', action: function() {
+       var val = parseInt(document.getElementById('goalInput').value);
+       if (val && val > 0 && val <= 10000) { gState.settings.dailyGoal = val; saveSettings(gState.settings); hideModal(); refreshUI(); showToast('\u6bcf\u65e5\u76ee\u6807\u5df2\u8bbe\u4e3a ' + val + ' ml'); }
+       else { showToast('\u8bf7\u8f93\u5165\u6709\u6548\u76ee\u6807\uff081-10000ml\uff09'); }
+     }}]);
+  setTimeout(function() { var e = document.getElementById('goalInput'); if (e) e.focus(); }, 100);
+}
+
+function showCustomAmountDialog() {
+  showModal('\u8bbe\u7f6e\u81ea\u5b9a\u4e49\u6c34\u91cf',
+    '<input type="number" id="customSettingInput" value="' + gState.settings.customAmount + '" placeholder="\u6c34\u91cf\uff08\u6beb\u5347\uff09" min="1" max="2000" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:-8px;margin-bottom:6px;">\u8303\u56f4\uff1a1-2000ml</div>',
+    [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+     { text: '\u4fdd\u5b58', cls: 'btn-confirm', action: function() {
+       var val = parseInt(document.getElementById('customSettingInput').value);
+       if (val && val > 0 && val <= 2000) { gState.settings.customAmount = val; saveSettings(gState.settings); hideModal(); updateSettingsUI(); showToast('\u81ea\u5b9a\u4e49\u6c34\u91cf\u5df2\u8bbe\u4e3a ' + val + ' ml'); }
+       else { showToast('\u8bf7\u8f93\u5165\u6709\u6548\u6c34\u91cf\uff081-2000ml\uff09'); }
+     }}]);
+  setTimeout(function() { var e = document.getElementById('customSettingInput'); if (e) e.focus(); }, 100);
+}
+
+function toggleReminder() {
+  var newVal = !gState.settings.enableReminder;
+  if (newVal) {
+    if (typeof Notification !== 'undefined') {
+      if (Notification.permission === 'granted') { gState.settings.enableReminder = true; saveSettings(gState.settings); updateSettingsUI(); startReminder(); showToast('\u559d\u6c34\u63d0\u9192\u5df2\u5f00\u542f'); }
+      else if (Notification.permission === 'denied') { showToast('\u901a\u77e5\u6743\u9650\u5df2\u88ab\u62d2\u7edd'); }
+      else { Notification.requestPermission().then(function(p) { if (p === 'granted') { gState.settings.enableReminder = true; saveSettings(gState.settings); updateSettingsUI(); startReminder(); showToast('\u559d\u6c34\u63d0\u9192\u5df2\u5f00\u542f'); } else { showToast('\u9700\u8981\u901a\u77e5\u6743\u9650\u624d\u80fd\u5f00\u542f\u63d0\u9192'); } }); }
+    } else { showToast('\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u901a\u77e5'); }
+  } else { gState.settings.enableReminder = false; saveSettings(gState.settings); updateSettingsUI(); stopReminder(); showToast('\u559d\u6c34\u63d0\u9192\u5df2\u5173\u95ed'); }
+}
+
+function startReminder() {
+  if (window._reminderInterval) { clearInterval(window._reminderInterval); }
+  var notify = function() {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification('\u559d\u6c34\u63d0\u9192', { body: '\u8be5\u559d\u6c34\u5566\uff01\u4fdd\u6301\u6c34\u5206\u6444\u5165\uff0c\u8ba9\u8eab\u4f53\u66f4\u5065\u5eb7\uff5e' });
+    }
+  };
+  notify();
+  window._reminderInterval = setInterval(notify, 60 * 60 * 1000);
+}
+
+function stopReminder() {
+  if (window._reminderInterval) { clearInterval(window._reminderInterval); window._reminderInterval = null; }
+}
+
+function toggleDarkMode() {
+  var current = localStorage.getItem('dark_mode') || 'auto';
+  var modes = ['auto', 'on', 'off'];
+  var next = modes[(modes.indexOf(current) + 1) % modes.length];
+  localStorage.setItem('dark_mode', next);
+  applyDarkMode(next);
+  updateSettingsUI();
+  var labels = { on: '\u6df1\u8272\u6a21\u5f0f\u5df2\u5f00\u542f', off: '\u6df1\u8272\u6a21\u5f0f\u5df2\u5173\u95ed', auto: '\u5df2\u5207\u6362\u4e3a\u8ddf\u968f\u7cfb\u7edf' };
+  showToast(labels[next]);
+}
+
+function applyDarkMode(mode) {
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.body.classList.toggle('dark-mode', mode === 'on' || (mode === 'auto' && prefersDark));
+}
+
+function showModal(title, body, actions) {
+  document.getElementById('modalTitle').textContent = title;
+  if (typeof body === 'string') { document.getElementById('modalBody').innerHTML = body; }
+  else { document.getElementById('modalBody').innerHTML = ''; if (body) { document.getElementById('modalBody').appendChild(body); } }
+  var actionsEl = document.getElementById('modalActions');
+  actionsEl.innerHTML = '';
+  (actions || []).forEach(function(a) {
+    var btn = document.createElement('button');
+    btn.textContent = a.text;
+    btn.className = a.cls || 'btn-confirm';
+    btn.onclick = a.action;
+    actionsEl.appendChild(btn);
+  });
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function hideModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(function() { el.classList.remove('show'); }, 2000);
+}
+var LB_ANIMALS = ['\u{1F43C}','\u{1F98A}','\u{1F430}','\u{1F436}','\u{1F431}','\u{1F981}','\u{1F42F}','\u{1F438}','\u{1F435}','\u{1F984}','\u{1F427}','\u{1F428}','\u{1F419}','\u{1F98B}','\u{1F422}','\u{1F98E}','\u{1F42C}','\u{1F9AD}','\u{1F99C}','\u{1F43F}\uFE0F','\u{1F980}','\u{1F421}','\u{1F433}','\u{1F40A}','\u{1F996}','\u{1F995}','\u{1F409}','\u{1F9A9}','\u{1F99A}','\u{1F9A2}'];
+var LB_NAMES = ['\u5c0f\u718a\u732b','\u5c0f\u72d0\u72f8','\u5c0f\u5154\u5b50','\u5c0f\u72d7\u72d7','\u5c0f\u732b\u54aa','\u5c0f\u72ee\u5b50','\u5c0f\u8001\u864e','\u5c0f\u9752\u86d9','\u5c0f\u7334\u5b50','\u5c0f\u72ec\u89d2\u517d','\u5c0f\u4f01\u9e45','\u5c0f\u8003\u62c9','\u5c0f\u7ae0\u9c7c','\u5c0f\u8774\u8776','\u5c0f\u4e4c\u9f9f','\u5c0f\u8725\u8734','\u5c0f\u6d77\u8c5a','\u5c0f\u6d77\u8c79','\u5c0f\u9e66\u9e49','\u5c0f\u677e\u9f20','\u5c0f\u8783\u87f9','\u5c0f\u6cb3\u8c5a','\u5c0f\u9cb8\u9c7c','\u5c0f\u9cc4\u9c7c','\u5c0f\u6050\u9f99','\u5c0f\u7ffc\u9f99','\u5c0f\u9f99','\u5c0f\u706b\u70c8\u9e1f','\u5c0f\u5b54\u96c0','\u5c0f\u5929\u9e45'];
+
+function getMyAnimal() {
+  var id = localStorage.getItem('lb_animal_idx');
+  if (id === null) { id = Math.floor(Math.random() * LB_ANIMALS.length); localStorage.setItem('lb_animal_idx', id.toString()); }
+  var nickname = localStorage.getItem('lb_nickname') || '';
+  return { emoji: LB_ANIMALS[parseInt(id)], name: nickname || LB_NAMES[parseInt(id)], idx: parseInt(id) };
+}
+
+function showAvatarDialog() {
+  var me = getMyAnimal();
+  var grid = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">';
+  for (var i = 0; i < LB_ANIMALS.length; i++) {
+    var sel = (i === me.idx) ? ' style="border:2px solid #4A90E2;background:#e8f0fe;transform:scale(1.05);"' : '';
+    grid += '<div onclick="selectAvatar(' + i + ')"' + sel + ' class="avatar-opt"><div style="font-size:1.75rem;">' + LB_ANIMALS[i] + '</div><div style="font-size:0.625rem;color:#999;margin-top:2px;">' + LB_NAMES[i] + '</div></div>';
+  }
+  grid += '</div>';
+  showModal('\u9009\u62e9\u5934\u50cf',
+    '<style>.avatar-opt{font-size:1.75rem;text-align:center;padding:6px;cursor:pointer;border-radius:10px;border:2px solid transparent;transition:all .2s;}.avatar-opt:hover{background:#f0f4fb;transform:scale(1.1);}</style><div style="max-height:55vh;overflow-y:auto;padding:4px 0;">' + grid + '</div>',
+    [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
+}
+
+function selectAvatar(idx) {
+  localStorage.setItem('lb_animal_idx', idx.toString());
+  hideModal(); updateSettingsUI();
+  showToast('\u5934\u50cf\u5df2\u66f4\u6362\u4e3a ' + LB_ANIMALS[idx]);
+}
+
+function showNicknameDialog() {
+  var current = localStorage.getItem('lb_nickname') || '';
+  showModal('\u4fee\u6539\u6635\u79f0',
+    '<input type="text" id="nicknameInput" value="' + current + '" placeholder="\u8f93\u5165\u4f60\u7684\u6635\u79f0" maxlength="10" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:6px;">\u6700\u591a 10 \u4e2a\u5b57\u7b26</div>',
+    [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+     { text: '\u4fdd\u5b58', cls: 'btn-confirm', action: function() {
+       var val = document.getElementById('nicknameInput').value.trim();
+       if (val) { localStorage.setItem('lb_nickname', val); hideModal(); updateSettingsUI(); showToast('\u6635\u79f0\u5df2\u8bbe\u4e3a ' + val); }
+       else { localStorage.removeItem('lb_nickname'); hideModal(); updateSettingsUI(); showToast('\u5df2\u6062\u590d\u9ed8\u8ba4\u540d\u79f0'); }
+     }}]);
+  setTimeout(function() { var e = document.getElementById('nicknameInput'); if (e) e.focus(); }, 100);
+}
+
+function switchTab(idx) {
+  var pages = ['page-home', 'page-leaderboard', 'page-history', 'page-settings'];
+  var titles = ['\u559d\u6c34\u8bb0\u5f55 \u{1F4A7}', '\u6392\u884c\u699c \u{1F3C6}', '\u559d\u6c34\u5386\u53f2 \u{1F4CA}', '\u8bbe\u7f6e \u2699\uFE0F'];
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(pages[idx]).classList.add('active');
+  document.getElementById('appbar').textContent = titles[idx];
+  document.querySelectorAll('.bottom-nav button').forEach(function(b, i) { b.classList.toggle('active', i === idx); });
+  if (idx === 2) { createChart(); renderHeatmap(); }
+  if (idx === 1) { renderLeaderboard(); }
+}
+
+var lbPeriod = 'today';
+var lbInterval = null;
+
+function getMockUsers(count) {
+  var users = [];
+  for (var i = 0; i < count; i++) {
+    var idx = i % LB_ANIMALS.length;
+    var base = 500 + ((i * 7 + 13) * 37) % 3500;
+    users.push({ emoji: LB_ANIMALS[idx], name: LB_NAMES[idx], todayMl: Math.max(0, Math.min(5000, base + Math.floor(Math.random() * 800))), streak: Math.floor(Math.random() * 8), isMe: false });
+  }
+  return users;
+}
+
+function renderLeaderboard() {
+  var me = getMyAnimal();
+  var myTotal = getTodayTotal(gState.records);
+  var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
+  var myEntry = { emoji: me.emoji, name: me.name, todayMl: myTotal, streak: myStreak, isMe: true };
+
+  function renderList(allUsers) {
+    allUsers.sort(function(a, b) { return b.todayMl - a.todayMl; });
+    allUsers = allUsers.slice(0, 20);
+    var html = '';
+    allUsers.forEach(function(u, i) {
+      var rank = i + 1;
+      var rankText = rank === 1 ? '\u{1F947}' : rank === 2 ? '\u{1F948}' : rank === 3 ? '\u{1F949}' : rank;
+      var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+    });
+    document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
+  }
+
+  /* 尝试拉在线排行榜，失败则用 mock */
+  var onlinePromise = fetchOnlineLeaderboard();
+  if (onlinePromise) {
+    onlinePromise.then(function(data) {
+      if (data && data.length > 0) {
+        var mapped = data.map(function(u) {
+          var isMe = (u.user_id === getAnonUserId());
+          var idx = u.avatar_idx || 0;
+          return {
+            emoji: LB_ANIMALS[idx] || '\u{1F430}',
+            name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
+            todayMl: u.today_ml || 0,
+            streak: u.streak || 0,
+            isMe: isMe
+          };
+        });
+        /* 确保当前用户在列表里 */
+        var exists = mapped.some(function(u) { return u.isMe; });
+        if (!exists) { mapped.push(myEntry); }
+        renderList(mapped);
+        return;
+      }
+      /* 在线数据为空，回退 */
+      renderList(getMockUsers(19).concat([myEntry]));
+    });
+  } else {
+    /* 未配置 Supabase，直接用 mock */
+    renderList(getMockUsers(19).concat([myEntry]));
+  }
+
+  if (lbInterval) { clearInterval(lbInterval); }
+  lbInterval = setInterval(function() { if (document.getElementById('page-leaderboard').classList.contains('active')) { renderLeaderboard(); } }, 10000);
+}
+
+function switchLB(period) {
+  lbPeriod = period;
+  document.querySelectorAll('#lbTabs button').forEach(function(b) { b.classList.toggle('active', b.textContent.trim() === (period === 'today' ? '\u4eca\u65e5' : period === 'week' ? '\u672c\u5468' : '\u672c\u6708')); });
+  renderLeaderboard();
+}
+function renderHeatmap() {
+  var wrap = document.getElementById('heatmapWrap');
+  if (!wrap) return;
+  var records = gState.records;
+  var goal = gState.settings.dailyGoal;
+  var now = new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  var days = new Date(year, month + 1, 0).getDate();
+  var firstDay = new Date(year, month, 1).getDay();
+  var totalByDay = {};
+  records.forEach(function(r) { if (r.dateKey) { totalByDay[r.dateKey] = (totalByDay[r.dateKey] || 0) + r.amount; } });
+  var html = '<div class="heatmap-month">' + year + '.' + String(month+1).padStart(2,'0') + '</div><div class="heatmap-grid">';
+  var weekdays = ['\u65e5','\u4e00','\u4e8c','\u4e09','\u56db','\u4e94','\u516d'];
+  for (var w = 0; w < 7; w++) { html += '<div class="heatmap-day" style="font-size:0.5625rem;color:#bbb;">' + weekdays[w] + '</div>'; }
+  for (var i = 0; i < firstDay; i++) { html += '<div class="heatmap-day"></div>'; }
+  var todayKey = year + '-' + String(month+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  for (var d = 1; d <= days; d++) {
+    var key = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var amt = totalByDay[key] || 0;
+    var fillPct = goal > 0 ? Math.round(Math.min(amt / goal, 1) * 100) : 0;
+    var isToday = (key === todayKey);
+    var hasWater = (amt > 0);
+    var cls = 'heatmap-day' + (hasWater ? ' has-data' : '') + (isToday ? ' today' : '');
+    html += '<div class="' + cls + '" style="position:relative;">';
+    if (hasWater) {
+      html += '<div class="hm-water-wrap"><div class="hm-water-fill" style="height:' + fillPct + '%">';
+      html += '<div class="hm-wave"><svg viewBox="0 0 30 6" preserveAspectRatio="none">';
+      html += '<path class="w1" d="M0,3 Q4,0 8,3 T16,3 T24,3 T30,3 V6 H0 Z" fill="rgba(74,144,226,.5)"/><path class="w2" d="M0,4 Q4,6 8,4 T16,4 T24,4 T30,4 V6 H0 Z" fill="rgba(74,144,226,.3)"/>';
+      html += '</svg></div></div></div>';
+    }
+    html += '<div class="hm-date">' + d + (hasWater ? '<div class="hm-tip">' + key + ' ' + amt + 'ml</div>' : '') + '</div></div>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+loadAll();
+</script>
+<script>
+if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem('dark_mode') || 'auto'); }); }
+</script>
+</body>
+</html>

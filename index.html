@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="喝水记录">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>喝水记录</title>
+  <title>喝杯水吧</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -23,11 +23,20 @@
     .lb-card { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
     .lb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .lb-header h3 { font-size: 0.9375rem; font-weight: 600; margin: 0; }
+    .lb-refresh { font-size: 0.875rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; border: none; background: #f0f4fb; color: #4A90E2; transition: all .2s; flex-shrink: 0; margin-left: 6px; }
+    .lb-refresh:hover { background: #e0e8f5; }
+    .lb-refresh:disabled { opacity: .4; cursor: not-allowed; }
+    .lb-refresh.spinning { animation: lbSpin .6s linear infinite; }
+    @keyframes lbSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .lb-tabs { display: flex; gap: 4px; }
     .lb-tabs button { padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.75rem; transition: all .2s; color: #666; }
     .lb-tabs button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; }
+    .mood-help { font-size: 0.8125rem; cursor: pointer; margin-left: 6px; color: #4A90E2; opacity: .85; transition: opacity .2s; vertical-align: middle; background: #e8f0fe; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+    .mood-help:hover { opacity: 1; background: #d0e2f8; }
+    .dark-mode .mood-help { color: #7bb3e8; background: rgba(74,144,226,.2); }
     .lb-list { display: flex; flex-direction: column; gap: 6px; }
-    .lb-item { display: flex; align-items: center; padding: 10px 12px; background: #f8faff; border-radius: 10px; border: 1px solid #eef3fb; }
+    .lb-item { display: flex; align-items: center; padding: 10px 12px; background: #f8faff; border-radius: 10px; border: 1px solid #eef3fb; cursor: pointer; transition: background .15s; }
+    .lb-item:hover { background: #f0f5ff; }
     .lb-item:nth-child(even) { background: #f5f9ff; }
     .lb-rank { width: 28px; font-size: 0.875rem; font-weight: 700; color: #999; text-align: center; flex-shrink: 0; }
     .lb-rank.gold { color: #FFB300; font-size: 1.125rem; }
@@ -98,9 +107,18 @@
     .btn-water:active { opacity: .7; }
     .btn-water.custom { background: #FF9800; }
     .btn-water.small { flex: 0 0 auto; padding: 10px 16px; min-width: 60px; }
+    .mood-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mood-btn { font-size: 1.375rem; padding: 6px 10px; border: 2px solid transparent; border-radius: 10px; background: #f5f7fa; cursor: pointer; transition: all .2s; line-height: 1; }
+    .mood-btn:hover { background: #e8f0fe; transform: scale(1.1); }
+    .mood-btn.active { border-color: #4A90E2; background: #e8f0fe; box-shadow: 0 0 0 2px rgba(74,144,226,.2); transform: scale(1.15); }
     .record-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
     .record-item:last-child { border-bottom: none; }
-    .record-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(74,144,226,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.125rem; margin-right: 12px; }
+    .record-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(74,144,226,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.125rem; margin-right: 12px; flex-shrink: 0; }
+    .record-mood-add { font-size: 0.875rem; font-weight: 700; color: #4A90E2; cursor: pointer; margin-left: 4px; }
+    .record-mood-set { font-size: 1rem; margin-right: 4px; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background .2s; }
+    .record-mood-set:hover { background: #e8f0fe; }
+    .record-mood-set.editing { background: #fff3cd; box-shadow: 0 0 0 2px #ffc107; border-radius: 4px; padding: 2px 4px; }
+    .record-mood-add { font-size: 0.875rem; font-weight: 700; color: #4A90E2; }
     .record-info { flex: 1; }
     .record-amount { font-weight: 600; font-size: 0.9375rem; }
     .record-time { font-size: 0.75rem; color: #999; margin-top: 2px; }
@@ -156,7 +174,7 @@
   </style>
 </head>
 <body>
-<div class="appbar" id="appbar">喝水记录 💧</div>
+<div class="appbar" id="appbar">喝杯水吧 💧</div>
 <div class="page active" id="page-home">
   <div class="card garden" id="gardenCard">
     <div class="plant-emoji" id="plantEmoji">🌰</div>
@@ -192,6 +210,32 @@
         <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
         <div class="track-label"><span>0 ml</span><span id="trackGoalLabel">2000 ml</span></div>
       </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">😊 当下心情 <span class="mood-help" onclick="showMoodHelp()" title="如何添加心情">❔</span></div>
+    <div class="mood-row" id="moodRow">
+      <button class="mood-btn" data-mood="😊" onclick="selectMood(this)">😊</button>
+      <button class="mood-btn" data-mood="😄" onclick="selectMood(this)">😄</button>
+      <button class="mood-btn" data-mood="🥰" onclick="selectMood(this)">🥰</button>
+      <button class="mood-btn" data-mood="😌" onclick="selectMood(this)">😌</button>
+      <button class="mood-btn" data-mood="😤" onclick="selectMood(this)">😤</button>
+      <button class="mood-btn" data-mood="😢" onclick="selectMood(this)">😢</button>
+      <button class="mood-btn" data-mood="🤯" onclick="selectMood(this)">🤯</button>
+      <button class="mood-btn" data-mood="💪" onclick="selectMood(this)">💪</button>
+      <button class="mood-btn" data-mood="🫠" onclick="selectMood(this)">🫠</button>
+      <button class="mood-btn" data-mood="🤗" onclick="selectMood(this)">🤗</button>
+      <button class="mood-btn" data-mood="😎" onclick="selectMood(this)">😎</button>
+      <button class="mood-btn" data-mood="🥳" onclick="selectMood(this)">🥳</button>
+      <button class="mood-btn" data-mood="🤩" onclick="selectMood(this)">🤩</button>
+      <button class="mood-btn" data-mood="😇" onclick="selectMood(this)">😇</button>
+      <button class="mood-btn" data-mood="😏" onclick="selectMood(this)">😏</button>
+      <button class="mood-btn" data-mood="🤔" onclick="selectMood(this)">🤔</button>
+      <button class="mood-btn" data-mood="🥶" onclick="selectMood(this)">🥶</button>
+      <button class="mood-btn" data-mood="🥺" onclick="selectMood(this)">🥺</button>
+      <button class="mood-btn" data-mood="😴" onclick="selectMood(this)">😴</button>
+      <button class="mood-btn" data-mood="🤪" onclick="selectMood(this)">🤪</button>
+      <button class="mood-btn" data-mood="😰" onclick="selectMood(this)">😰</button>
     </div>
   </div>
   <div class="card">
@@ -275,7 +319,7 @@
     </div>
     <div class="setting-item" onclick="showAboutDialog()">
       <span class="setting-icon">ℹ️</span>
-      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc">喝水记录 v1.0</div></div>
+      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc">喝杯水吧 v1.2.2</div></div>
       <span class="setting-arrow">›</span>
     </div>
   </div>
@@ -305,10 +349,13 @@
 <div class="page" id="page-leaderboard">
   <div class="lb-card">
     <div class="lb-header"><h3>🏆 喝水排行榜</h3>
-      <div class="lb-tabs" id="lbTabs">
-        <button class="active" onclick="switchLB('today')">今日</button>
-        <button onclick="switchLB('week')">本周</button>
-        <button onclick="switchLB('month')">本月</button>
+      <div style="display:flex;align-items:center;">
+        <div class="lb-tabs" id="lbTabs">
+          <button class="active" onclick="switchLB('today')">今日</button>
+          <button onclick="switchLB('week')">本周</button>
+          <button onclick="switchLB('month')">本月</button>
+        </div>
+        <button class="lb-refresh" id="lbRefreshBtn" onclick="manualRefreshLeaderboard()">⟳</button>
       </div>
     </div>
     <div class="lb-list" id="lbList"><div class="lb-empty">加载中...</div></div>
@@ -383,6 +430,11 @@ function syncTodayToLeaderboard() {
   var me = getMyAnimal();
   var total = getTodayTotal(gState.records);
   var streak = calcStreak(gState.records, gState.settings.dailyGoal);
+  /* 整理今日记录（含情绪）用于在线展示 */
+  var todayKey = getDateKey(new Date());
+  var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
+    return { amount: r.amount, time: r.dateTime, mood: r.mood || '' };
+  });
   return client
     .from('leaderboard')
     .upsert({
@@ -391,6 +443,7 @@ function syncTodayToLeaderboard() {
       avatar_idx: me.idx,
       today_ml: total,
       streak: streak,
+      today_records: todayRecords,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' })
     .then(function(resp) {
@@ -623,15 +676,55 @@ function renderRecords(todayRecords) {
   }
   list.innerHTML = '';
   var reversed = todayRecords.slice().reverse();
-  reversed.forEach(function(r) {
+  var showMax = 5;
+  var isCollapsed = !_recordsExpanded && reversed.length > showMax;
+  var displayList = isCollapsed ? reversed.slice(0, showMax) : reversed;
+  displayList.forEach(function(r) {
     var d = new Date(r.dateTime);
     var dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     var timeStr = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     var div = document.createElement('div');
     div.className = 'record-item';
-    div.innerHTML = '<div class="record-icon">\u{1F4A7}</div><div class="record-info"><div class="record-amount">' + r.amount + ' ml</div><div class="record-time">' + dateStr + ' ' + timeStr + '</div></div><button class="record-del" onclick="deleteRecord(\'' + r.id + '\')">\u2715</button>';
+    /* 心情显示在水量前面，有心情时可点击编辑 */
+    var isEditing = (_editingRecordId === r.id);
+    var moodHtml = r.mood
+      ? '<span class="record-mood-set' + (isEditing ? ' editing' : '') + '" onclick="startEditMood(\'' + r.id + '\')" title="点击更换心情">' + r.mood + '</span>'
+      : '';
+    /* 无心情的记录永远显示加号 */
+    var addBtn = !r.mood
+      ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="标注心情">➕</span>'
+      : '';
+    div.innerHTML = '<div class="record-icon">\u{1F4A7}</div><div class="record-info"><div class="record-amount">' + moodHtml + r.amount + ' ml' + addBtn + '</div><div class="record-time">' + dateStr + ' ' + timeStr + '</div></div><button class="record-del" onclick="deleteRecord(\'' + r.id + '\')">\u2715</button>';
     list.appendChild(div);
   });
+  /* 展开/收起按钮 */
+  if (reversed.length > showMax) {
+    var toggleBtn = document.createElement('div');
+    toggleBtn.style.cssText = 'text-align:center;padding:8px 0 2px;';
+    var toggleLink = document.createElement('span');
+    toggleLink.style.cssText = 'color:#4A90E2;font-size:0.8125rem;cursor:pointer;';
+    toggleLink.textContent = isCollapsed ? '\u5c55\u5f00\u5168\u90e8 ' + reversed.length + ' \u6761 \u25BC' : '\u6536\u8d77 \u25B2';
+    toggleLink.onclick = function() { _recordsExpanded = !_recordsExpanded; renderRecords(todayRecords); };
+    toggleBtn.appendChild(toggleLink);
+    list.appendChild(toggleBtn);
+  }
+}
+
+/* 为已有记录标注/更换心情 */
+function applyMoodToRecord(id, mood) {
+  var m = mood || _selectedMood;
+  if (!m) { showToast('\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a\u5fc3\u60c5'); return; }
+  var found = false;
+  for (var i = 0; i < gState.records.length; i++) {
+    if (gState.records[i].id === id) {
+      gState.records[i].mood = m;
+      found = true; break;
+    }
+  }
+  if (!found) return;
+  saveRecords(gState.records);
+  refreshUI();
+  showToast('\u5fc3\u60c5\u5df2\u6807\u6ce8');
 }
 
 function triggerExcessEffect(level) {
@@ -718,6 +811,48 @@ function triggerOverflow(intensity) {
   setTimeout(function() { wrap.classList.remove('active'); wrap.innerHTML = ''; }, 2500);
 }
 var gState = { records: [], settings: getDefaultSettings(), chartWeek: true, chartInstance: null, todayExcessCount: 0, lastExcessDateKey: '' };
+var _selectedMood = '';
+var _editingRecordId = null;
+var _recordsExpanded = false;
+
+function selectMood(el) {
+  var mood = el.getAttribute('data-mood');
+  /* 如果正在编辑某条记录的心情，直接应用 */
+  if (_editingRecordId) {
+    var editId = _editingRecordId;
+    _editingRecordId = null;
+    document.querySelectorAll('.mood-btn').forEach(function(b) { b.classList.remove('active'); });
+    applyMoodToRecord(editId, mood);
+    return;
+  }
+  document.querySelectorAll('.mood-btn').forEach(function(b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  _selectedMood = mood;
+}
+
+function startEditMood(id) {
+  /* 取消之前可能的高亮 */
+  _editingRecordId = id;
+  showToast('\u70b9\u51fb\u4e00\u4e2a\u65b0\u7684\u5fc3\u60c5\u8868\u60c5\u6765\u66f4\u6362');
+  refreshUI();
+}
+
+/* 心情使用说明 */
+function showMoodHelp() {
+  showModal('\u{1F3AD} \u5fc3\u60c5\u4f7f\u7528\u8bf4\u660e',
+    '<div style="font-size:0.8125rem;line-height:1.8;">' +
+    '<b>\u2764\ufe0f \u559d\u6c34\u65f6\u8bb0\u5f55\u5fc3\u60c5</b><br>' +
+    '\u2460 \u5148\u70b9\u4e00\u4e2a\u5fc3\u60c5\u8868\u60c5<Br>' +
+    '\u2461 \u518d\u70b9\u91cf\u6570\u6309\u94ae \u2192 \u5fc3\u60c5\u81ea\u52a8\u4f34\u968f\u8bb0\u5f55<br><br>' +
+    '<b>\u2795 \u7ed9\u5df2\u6709\u7684\u8bb0\u5f55\u8865\u5fc3\u60c5</b><br>' +
+    '\u2460 \u5148\u70b9\u4e00\u4e2a\u5fc3\u60c5\u8868\u60c5<br>' +
+    '\u2461 \u518d\u70b9\u8bb0\u5f55\u4e0a\u7684 \u2795 \u56fe\u6807<br><br>' +
+    '<b>\U0001F504 \u66f4\u6362\u5fc3\u60c5</b><br>' +
+    '\u2460 \u70b9\u4e00\u4e0b\u8bb0\u5f55\u4e0a\u7684\u65e7\u5fc3\u60c5\uff08\u53d8\u9ec4\u9ad8\u4eae\uff09<br>' +
+    '\u2461 \u518d\u70b9\u4e00\u4e2a\u65b0\u7684\u5fc3\u60c5\u8868\u60c5 \u2192 \u81ea\u52a8\u66f4\u6362</div>',
+    [{ text: '\u77e5\u9053\u4e86', cls: 'btn-confirm', action: hideModal }]
+  );
+}
 
 function exportData() {
   var data = { version: 1, exportedAt: new Date().toISOString(), records: loadRecords(), settings: loadSettings() };
@@ -836,12 +971,16 @@ function addWater(amount) {
     id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)),
     amount: amount,
     dateTime: new Date().toISOString(),
-    dateKey: todayKey
+    dateKey: todayKey,
+    mood: _selectedMood || ''
   });
   saveRecords(gState.records);
   syncTodayToLeaderboard(); /* 同步到在线排行榜 */
   if (wasAlreadyAtGoal) { gState.todayExcessCount++; gState.lastExcessDateKey = todayKey; triggerExcessEffect(gState.todayExcessCount); }
   refreshUI();
+  /* 重置情绪选择 */
+  _selectedMood = '';
+  document.querySelectorAll('.mood-btn').forEach(function(b) { b.classList.remove('active'); });
   showToast('\u5df2\u8bb0\u5f55 ' + amount + ' ml \u559d\u6c34');
 }
 
@@ -1083,7 +1222,7 @@ function showNicknameDialog() {
 
 function switchTab(idx) {
   var pages = ['page-home', 'page-leaderboard', 'page-history', 'page-settings'];
-  var titles = ['\u559d\u6c34\u8bb0\u5f55 \u{1F4A7}', '\u6392\u884c\u699c \u{1F3C6}', '\u559d\u6c34\u5386\u53f2 \u{1F4CA}', '\u8bbe\u7f6e \u2699\uFE0F'];
+  var titles = ['\u559d\u676f\u6c34\u5427 \u{1F4A7}', '\u6392\u884c\u699c \u{1F3C6}', '\u559d\u6c34\u5386\u53f2 \u{1F4CA}', '\u8bbe\u7f6e \u2699\uFE0F'];
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.getElementById(pages[idx]).classList.add('active');
   document.getElementById('appbar').textContent = titles[idx];
@@ -1119,7 +1258,8 @@ function renderLeaderboard() {
       var rank = i + 1;
       var rankText = rank === 1 ? '\u{1F947}' : rank === 2 ? '\u{1F948}' : rank === 3 ? '\u{1F949}' : rank;
       var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+      var userData = btoa(encodeURIComponent(JSON.stringify({ name: u.name, emoji: u.emoji, records: u.todayRecords || [] })));
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-records="' + userData + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
   }
@@ -1137,6 +1277,7 @@ function renderLeaderboard() {
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
             todayMl: u.today_ml || 0,
             streak: u.streak || 0,
+            todayRecords: u.today_records || [],
             isMe: isMe
           };
         });
@@ -1156,6 +1297,67 @@ function renderLeaderboard() {
 
   if (lbInterval) { clearInterval(lbInterval); }
   lbInterval = setInterval(function() { if (document.getElementById('page-leaderboard').classList.contains('active')) { renderLeaderboard(); } }, 10000);
+}
+
+var _lastRefreshTime = 0;
+var REFRESH_COOLDOWN = 15000; /* 15 秒冷却 */
+
+function manualRefreshLeaderboard() {
+  var now = Date.now();
+  var elapsed = now - _lastRefreshTime;
+  if (elapsed < REFRESH_COOLDOWN) {
+    var remain = Math.ceil((REFRESH_COOLDOWN - elapsed) / 1000);
+    showToast('\u8bf7' + remain + '\u79d2\u540e\u518d\u5237\u65b0');
+    return;
+  }
+  var btn = document.getElementById('lbRefreshBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '\u21BB';
+    btn.classList.add('spinning');
+  }
+  _lastRefreshTime = now;
+  /* 先同步当前用户数据，再刷新排行榜 */
+  syncTodayToLeaderboard().then(function() {
+    renderLeaderboard();
+    setTimeout(function() {
+      if (btn) { btn.disabled = false; btn.textContent = '\u27F3'; btn.classList.remove('spinning'); }
+    }, REFRESH_COOLDOWN);
+  });
+}
+
+/* 点击排行榜头像查看对方今日喝水记录 */
+function showUserRecords(el) {
+  var raw = el.getAttribute('data-records');
+  if (!raw) return;
+  var data = JSON.parse(decodeURIComponent(atob(raw)));
+  var name = data.name || '\u533f\u540d';
+  var emoji = data.emoji || '\u{1F4A7}';
+  var records = data.records || [];
+  if (records.length === 0) {
+    showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55',
+      '<div style="text-align:center;padding:20px;color:#999;font-size:0.875rem;">\u6682\u65e0\u8bb0\u5f55</div>',
+      [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
+    );
+    return;
+  }
+  var total = 0;
+  var html = '<div style="max-height:50vh;overflow-y:auto;">';
+  records.forEach(function(r) {
+    total += r.amount;
+    var t = new Date(r.time);
+    var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    var moodStr = r.mood ? r.mood + ' ' : '';
+    html += '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">' +
+      '<span style="font-size:1.25rem;margin-right:10px;">\u{1F4A7}</span>' +
+      '<div style="flex:1;"><span style="font-weight:600;">' + moodStr + r.amount + ' ml</span>' +
+      '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + timeStr + '</div></div></div>';
+  });
+  html += '</div>';
+  html += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid #e0e0e0;margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:#4A90E2;">' + total + ' ml</span></div>';
+  showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55', html,
+    [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
+  );
 }
 
 function switchLB(period) {

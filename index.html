@@ -346,6 +346,7 @@
       <div class="setting-info"><div class="setting-label">立即同步</div><div class="setting-desc">手动触发一次双向数据同步</div></div>
       <span class="setting-arrow">›</span>
     </div>
+    <div id="syncDebug" style="display:none;font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;margin:4px 0;line-height:1.6;word-break:break-all;"></div>
     <div class="setting-item" onclick="disconnectLeaderboard()" style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:12px;">
       <span class="setting-icon">🔌</span>
       <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">断开排行榜</div><div class="setting-desc">清除云端连接，恢复为本地模式</div></div>
@@ -461,6 +462,7 @@ function syncTodayToLeaderboard(skipPull) {
     var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
       return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
     });
+    syncDebug('📤 推送 ' + todayRecords.length + ' 条记录, 总量 ' + total + 'ml');
     return client
       .from('leaderboard')
       .upsert({
@@ -533,18 +535,21 @@ function fetchUserRecords(userId) {
 }
 /* 拉取当前用户在云端的今日记录（用于设备间同步合并） */
 function fetchMyTodayRecordsFromCloud() {
-  if (!isSupabaseConfigured()) return Promise.resolve(null);
+  if (!isSupabaseConfigured()) { syncDebug('⚠️ Supabase 未配置，跳过云端拉取'); return Promise.resolve(null); }
   var client = getSupabaseClient();
-  if (!client) return Promise.resolve(null);
+  if (!client) { syncDebug('⚠️ 无法创建 Supabase 客户端'); return Promise.resolve(null); }
   var uid = getAnonUserId();
+  syncDebug('🔍 查询云端 user_id=' + uid.substring(0, 8) + '...');
   return client
     .from('leaderboard')
     .select('today_records')
     .eq('user_id', uid)
     .maybeSingle()
     .then(function(resp) {
-      if (resp.error) { console.warn('Fetch my records failed:', resp.error); return null; }
-      return resp.data ? resp.data.today_records : null;
+      if (resp.error) { syncDebug('❌ 查询失败: ' + resp.error.message); console.warn('Fetch my records failed:', resp.error); return null; }
+      var recs = resp.data ? resp.data.today_records : null;
+      syncDebug('📦 云端返回 today_records: ' + (recs ? recs.length + ' 条' : '空'));
+      return recs;
     });
 }
 
@@ -604,17 +609,38 @@ function generatePairingCode() {
     });
 }
 
+/* 同步调试日志（在设置页显示） */
+function syncDebug(msg) {
+  var el = document.getElementById('syncDebug');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = el.innerHTML + '<div>' + msg + '</div>';
+  el.scrollTop = el.scrollHeight;
+}
+function syncDebugClear() {
+  var el = document.getElementById('syncDebug');
+  if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+}
+
 /* 强制双向同步：先推本地数据，再拉云端合并 */
 function forceSync() {
   if (!isSupabaseConfigured()) { showToast('请先配置 Supabase（排行榜设置）'); return; }
-  showToast('同步中...');
+  syncDebugClear();
+  syncDebug('🔄 开始同步...');
+  syncDebug('用户 ID: ' + getAnonUserId().substring(0, 8) + '...');
   /* 先拉取云端数据合并到本地，再推送合并后的完整数据到云端 */
-  mergeCloudTodayRecords().then(function() {
+  mergeCloudTodayRecords().then(function(count) {
+    syncDebug('📥 拉取云端完成，合并了 ' + count + ' 条记录');
+    syncDebug('📤 推送本地数据到云端...');
     return syncTodayToLeaderboard();
   }).then(function() {
+    syncDebug('✅ 同步完成');
+    syncDebug('本地今日记录数: ' + getTodayRecords(gState.records).length);
+    syncDebug('今日总水量: ' + getTodayTotal(gState.records) + 'ml');
     refreshUI();
     showToast('同步完成');
-  }).catch(function() {
+  }).catch(function(e) {
+    syncDebug('❌ 同步失败: ' + (e && e.message ? e.message : '未知错误'));
     showToast('同步失败，请检查网络');
   });
 }

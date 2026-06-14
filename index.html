@@ -483,7 +483,13 @@ function syncTodayToLeaderboard(skipPull) {
         updated_at: new Date().toISOString()
       })
     }).then(function(resp) {
-      if (!resp.ok && resp.status !== 409) console.warn('Push failed:', resp.status);
+      if (resp.ok || resp.status === 409) {
+        syncDebug('✅ 推送成功 (HTTP ' + resp.status + ')');
+      } else {
+        syncDebug('❌ 推送失败 (HTTP ' + resp.status + ')');
+      }
+    }, function(err) {
+      syncDebug('❌ 推送异常: ' + err.message);
     });
   };
   if (skipPull) return doPush();
@@ -1251,7 +1257,21 @@ function addWater(amount) {
 function deleteRecord(id) {
   gState.records = gState.records.filter(function(r) { return r.id !== id; });
   saveRecords(gState.records);
-  syncTodayToLeaderboard(true); /* 跳过拉取合并，直接推送删除后的结果 */
+  var afterCount = gState.records.length;
+  syncDebug('🗑️ 删除记录，本地剩余 ' + afterCount + ' 条');
+  syncTodayToLeaderboard(true).then(function() {
+    syncDebug('✅ 已推送删除后的数据到云端');
+    /* 推完后立刻拉取验证 */
+    fetchMyTodayRecordsFromCloud().then(function(recs) {
+      var cloudCount = recs && Array.isArray(recs) ? recs.length : 0;
+      syncDebug('🔍 云端验证: ' + cloudCount + ' 条');
+      if (cloudCount > afterCount) {
+        syncDebug('❌ 云端未同步！仍比本地多 ' + (cloudCount - afterCount) + ' 条');
+      } else {
+        syncDebug('✅ 云端与本地一致');
+      }
+    });
+  });
   refreshUI();
   showToast('\u8bb0\u5f55\u5df2\u5220\u9664');
 }

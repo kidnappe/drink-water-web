@@ -447,34 +447,53 @@ function getSupabaseClient() {
   } catch(e) { return null; }
 }
 
-/* 将今日数据同步到 Supabase 排行榜（upsert） */
+/* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
 function syncTodayToLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve();
   var client = getSupabaseClient();
   if (!client) return Promise.resolve();
-  var me = getMyAnimal();
-  var total = getTodayTotal(gState.records);
-  var streak = calcStreak(gState.records, gState.settings.dailyGoal);
-  /* 整理今日记录（含情绪）用于在线展示 */
-  var todayKey = getDateKey(new Date());
-  var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
-    return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
-  });
-  return client
-    .from('leaderboard')
-    .upsert({
-      user_id: getAnonUserId(),
-      nickname: me.name,
-      avatar_idx: me.idx,
-      today_ml: total,
-      streak: streak,
-      today_records: todayRecords,
-      banned: false,  /* 每次正常同步清除封禁 */
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' })
-    .then(function(resp) {
-      if (resp.error) console.warn('Sync to leaderboard failed:', resp.error);
+  /* 先拉取云端今日记录合并到本地，防止覆盖其他设备的数据 */
+  return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
+    var todayKey = getDateKey(new Date());
+    var localIds = {};
+    gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
+    if (cloudRecs && Array.isArray(cloudRecs)) {
+      cloudRecs.forEach(function(cr) {
+        if (!cr.id || localIds[cr.id]) return;
+        gState.records.push({
+          id: cr.id,
+          amount: cr.amount,
+          dateTime: cr.time,
+          dateKey: todayKey,
+          mood: cr.mood || ''
+        });
+        localIds[cr.id] = true;
+      });
+      if (gState.records.length > 0) saveRecords(gState.records);
+    }
+    /* 现在本地已包含所有设备的今日记录，推上去 */
+    var me = getMyAnimal();
+    var total = getTodayTotal(gState.records);
+    var streak = calcStreak(gState.records, gState.settings.dailyGoal);
+    var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
+      return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
     });
+    return client
+      .from('leaderboard')
+      .upsert({
+        user_id: getAnonUserId(),
+        nickname: me.name,
+        avatar_idx: me.idx,
+        today_ml: total,
+        streak: streak,
+        today_records: todayRecords,
+        banned: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+      .then(function(resp) {
+        if (resp.error) console.warn('Sync to leaderboard failed:', resp.error);
+      });
+  });
 }
 
 /* 从 Supabase 获取在线排行榜（最多 20 条） */
@@ -585,11 +604,12 @@ function generatePairingCode() {
 function forceSync() {
   if (!isSupabaseConfigured()) { showToast('请先配置 Supabase（排行榜设置）'); return; }
   showToast('同步中...');
-  syncTodayToLeaderboard().then(function() {
-    return mergeCloudTodayRecords();
-  }).then(function(count) {
+  /* 先拉取云端数据合并到本地，再推送合并后的完整数据到云端 */
+  mergeCloudTodayRecords().then(function() {
+    return syncTodayToLeaderboard();
+  }).then(function() {
     refreshUI();
-    showToast(count > 0 ? '同步完成，合并了 ' + count + ' 条记录' : '同步完成，数据已是最新');
+    showToast('同步完成');
   }).catch(function() {
     showToast('同步失败，请检查网络');
   });

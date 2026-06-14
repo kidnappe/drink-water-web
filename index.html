@@ -337,6 +337,18 @@
     </div>
   </div>
   <div class="card">
+    <div class="setting-item" onclick="generatePairingCode()">
+      <span class="setting-icon">🔗</span>
+      <div class="setting-info"><div class="setting-label">连接手表</div><div class="setting-desc">生成配对码，手表输入后同步数据</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="forceSync()">
+      <span class="setting-icon">🔄</span>
+      <div class="setting-info"><div class="setting-label">立即同步</div><div class="setting-desc">手动触发一次双向数据同步</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+  </div>
+  <div class="card">
     <div class="setting-item" onclick="exportData()">
       <span class="setting-icon">📤</span>
       <div class="setting-info"><div class="setting-label">导出数据</div><div class="setting-desc">备份喝水记录到 JSON 文件</div></div>
@@ -440,7 +452,7 @@ function syncTodayToLeaderboard() {
   /* 整理今日记录（含情绪）用于在线展示 */
   var todayKey = getDateKey(new Date());
   var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
-    return { amount: r.amount, time: r.dateTime, mood: r.mood || '' };
+    return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
   });
   return client
     .from('leaderboard')
@@ -465,7 +477,7 @@ function fetchOnlineLeaderboard() {
   if (!client) return Promise.resolve(null);
   return client
     .from('leaderboard')
-    .select('*')
+    .select('user_id,nickname,avatar_idx,today_ml,streak')  /* 仅拉列表展示字段，不拉 today_records */
     .order('today_ml', { ascending: false })
     .limit(20)
     .then(function(resp) {
@@ -473,6 +485,109 @@ function fetchOnlineLeaderboard() {
       return resp.data || null;
     });
 }
+
+/* 按需拉取某个用户的今日详细记录（点击排行榜头像时触发） */
+function fetchUserRecords(userId) {
+  if (!isSupabaseConfigured()) return Promise.resolve(null);
+  var client = getSupabaseClient();
+  if (!client) return Promise.resolve(null);
+  return client
+    .from('leaderboard')
+    .select('user_id,nickname,avatar_idx,today_records')
+    .eq('user_id', userId)
+    .maybeSingle()
+    .then(function(resp) {
+      if (resp.error) { console.warn('Fetch user records failed:', resp.error); return null; }
+      return resp.data || null;
+    });
+}
+/* 拉取当前用户在云端的今日记录（用于设备间同步合并） */
+function fetchMyTodayRecordsFromCloud() {
+  if (!isSupabaseConfigured()) return Promise.resolve(null);
+  var client = getSupabaseClient();
+  if (!client) return Promise.resolve(null);
+  var uid = getAnonUserId();
+  return client
+    .from('leaderboard')
+    .select('today_records')
+    .eq('user_id', uid)
+    .maybeSingle()
+    .then(function(resp) {
+      if (resp.error) { console.warn('Fetch my records failed:', resp.error); return null; }
+      return resp.data ? resp.data.today_records : null;
+    });
+}
+
+/* 将云端今日记录合并到本地 records（按 id 去重） */
+function mergeCloudTodayRecords() {
+  if (!isSupabaseConfigured()) return Promise.resolve(0);
+  return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
+    if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) return 0;
+    var localIds = {};
+    var todayKey = getDateKey(new Date());
+    /* 建立本地今日记录 id 索引 */
+    gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
+    var merged = 0;
+    cloudRecs.forEach(function(cr) {
+      if (!cr.id) return;
+      if (!localIds[cr.id]) {
+        /* 云端有但本地没有 → 追加 */
+        gState.records.push({
+          id: cr.id,
+          amount: cr.amount,
+          dateTime: cr.time,
+          dateKey: todayKey,
+          mood: cr.mood || ''
+        });
+        merged++;
+      }
+    });
+    if (merged > 0) {
+      saveRecords(gState.records);
+    }
+    return merged;
+  });
+}
+
+/* 设备配对：生成 6 位配对码并上传到 Supabase */
+function generatePairingCode() {
+  if (!isSupabaseConfigured()) {
+    showToast('请先在排行榜设置中配置 Supabase');
+    return Promise.reject();
+  }
+  var client = getSupabaseClient();
+  if (!client) { showToast('Supabase 连接失败'); return Promise.reject(); }
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  var uid = getAnonUserId();
+  return client
+    .from('device_pairing')
+    .upsert({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() }, { onConflict: 'pairing_code' })
+    .then(function(resp) {
+      if (resp.error) { console.warn('Pairing code upload failed:', resp.error); showToast('配对码生成失败'); return; }
+      showModal('📱 连接手表',
+        '<div style="text-align:center;padding:16px 0;">' +
+        '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
+        '<div style="font-size:2.5rem;font-weight:700;letter-spacing:8px;color:#4A90E2;">' + code + '</div>' +
+        '<div style="font-size:0.75rem;color:#999;margin-top:10px;">配对码 5 分钟内有效</div></div>',
+        [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
+      );
+    });
+}
+
+/* 强制双向同步：先推本地数据，再拉云端合并 */
+function forceSync() {
+  if (!isSupabaseConfigured()) { showToast('请先配置 Supabase（排行榜设置）'); return; }
+  showToast('同步中...');
+  syncTodayToLeaderboard().then(function() {
+    return mergeCloudTodayRecords();
+  }).then(function(count) {
+    refreshUI();
+    showToast(count > 0 ? '同步完成，合并了 ' + count + ' 条记录' : '同步完成，数据已是最新');
+  }).catch(function() {
+    showToast('同步失败，请检查网络');
+  });
+}
+
 /* ── 结束 Supabase 集成 ── */
 
 function getDefaultSettings() {
@@ -955,6 +1070,13 @@ function loadAll() {
   var todayKey = getDateKey(new Date());
   if (gState.lastExcessDateKey !== todayKey) { gState.todayExcessCount = 0; gState.lastExcessDateKey = todayKey; }
   refreshUI();
+  /* 启动后尝试从云端合并今日记录（每个会话仅一次） */
+  if (!window._cloudMergedToday) {
+    window._cloudMergedToday = true;
+    mergeCloudTodayRecords().then(function(count) {
+      if (count > 0) refreshUI();
+    });
+  }
 }
 
 function refreshUI() {
@@ -1266,8 +1388,9 @@ function renderLeaderboard() {
       var rank = i + 1;
       var rankText = rank === 1 ? '\u{1F947}' : rank === 2 ? '\u{1F948}' : rank === 3 ? '\u{1F949}' : rank;
       var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
-      var userData = btoa(encodeURIComponent(JSON.stringify({ name: u.name, emoji: u.emoji, records: u.todayRecords || [] })));
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-records="' + userData + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+      /* 不再内嵌 today_records，改为存 user_id，点击时按需拉取 */
+      var uid = u.isMe ? '' : (u.user_id || '');
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
   }
@@ -1281,11 +1404,12 @@ function renderLeaderboard() {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
           return {
+            user_id: u.user_id,
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
             todayMl: u.today_ml || 0,
             streak: u.streak || 0,
-            todayRecords: u.today_records || [],
+            todayRecords: [],  /* 列表页不拉明细 */
             isMe: isMe
           };
         });
@@ -1334,15 +1458,42 @@ function manualRefreshLeaderboard() {
   });
 }
 
-/* 点击排行榜头像查看对方今日喝水记录 */
+/* 点击排行榜头像查看对方今日喝水记录（按需从云端拉取） */
 function showUserRecords(el) {
-  var raw = el.getAttribute('data-records');
-  if (!raw) return;
-  var data = JSON.parse(decodeURIComponent(atob(raw)));
-  var name = data.name || '\u533f\u540d';
-  var emoji = data.emoji || '\u{1F4A7}';
-  var records = data.records || [];
-  if (records.length === 0) {
+  var userId = el.getAttribute('data-userid');
+  var name = el.getAttribute('data-myname') || '\u533f\u540d';
+  var emoji = el.getAttribute('data-myoji') || '\u{1F4A7}';
+  /* 如果是自己，直接用本地数据 */
+  if (!userId) {
+    var myId = getAnonUserId();
+    userId = myId;
+  }
+  /* 先显示加载中 */
+  showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55',
+    '<div style="text-align:center;padding:20px;color:#999;font-size:0.8125rem;">\u52a0\u8f7d\u4e2d...</div>',
+    [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
+  );
+  /* 从云端拉取 */
+  if (userId === getAnonUserId()) {
+    /* 自己：用本地数据 */
+    var myRecords = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) {
+      return { amount: r.amount, time: r.dateTime, mood: r.mood || '' };
+    });
+    renderUserRecordsModal(emoji, name, myRecords);
+  } else {
+    fetchUserRecords(userId).then(function(data) {
+      if (!data) {
+        hideModal();
+        showToast('\u65e0\u6cd5\u52a0\u8f7d\u8be5\u7528\u6237\u6570\u636e');
+        return;
+      }
+      renderUserRecordsModal(emoji, name, data.today_records || []);
+    });
+  }
+}
+
+function renderUserRecordsModal(emoji, name, records) {
+  if (!records || records.length === 0) {
     showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55',
       '<div style="text-align:center;padding:20px;color:#999;font-size:0.875rem;">\u6682\u65e0\u8bb0\u5f55</div>',
       [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]

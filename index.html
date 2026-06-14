@@ -48,6 +48,7 @@
     .lb-unit { font-size: 0.6875rem; color: #aaa; font-weight: 400; }
     .lb-me { background: #e8f0fe !important; border-color: #4A90E2; box-shadow: 0 0 0 2px rgba(74,144,226,.15); position: relative; }
     .lb-me-tag { position: absolute; top: -6px; right: 8px; background: #4A90E2; color: #fff; font-size: 0.625rem; padding: 1px 8px; border-radius: 8px; font-weight: 600; }
+.lb-admin-del { display:inline-block;color:#e74c3c;cursor:pointer;font-size:0.75rem;font-weight:700;padding:0 3px;vertical-align:middle; }
     .lb-empty { text-align: center; padding: 30px 0; color: #999; font-size: 0.8125rem; }
     .lb-footer { font-size: 0.75rem; color: #aaa; text-align: center; padding: 10px; line-height: 1.6; }
     .card { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 10px; }
@@ -369,7 +370,9 @@
 
 <div class="page" id="page-leaderboard">
   <div class="lb-card">
-    <div class="lb-header"><h3>🏆 喝水排行榜</h3>
+    <div class="lb-header"><h3 id="lbTitle" onclick="onLbTitleTap()" style="cursor:pointer;">🏆 喝水排行榜</h3>
+      <span id="lbAdminBadge" style="display:none;font-size:0.625rem;color:#e74c3c;font-weight:600;margin-right:4px;">管理员</span>
+      <span id="lbExitAdmin" style="display:none;cursor:pointer;font-size:1rem;color:#e74c3c;font-weight:700;padding:0 4px;" onclick="exitAdminMode()" title="退出管理员模式">✕</span>
       <div style="display:flex;align-items:center;">
         <div class="lb-tabs" id="lbTabs">
           <button class="active" onclick="switchLB('today')">今日</button>
@@ -466,6 +469,7 @@ function syncTodayToLeaderboard() {
       today_ml: total,
       streak: streak,
       today_records: todayRecords,
+      banned: false,  /* 每次正常同步清除封禁 */
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' })
     .then(function(resp) {
@@ -480,7 +484,7 @@ function fetchOnlineLeaderboard() {
   if (!client) return Promise.resolve(null);
   return client
     .from('leaderboard')
-    .select('user_id,nickname,avatar_idx,today_ml,streak')  /* 仅拉列表展示字段，不拉 today_records */
+    .select('user_id,nickname,avatar_idx,today_ml,streak,banned')  /* 仅拉列表展示字段，不拉 today_records */
     .order('today_ml', { ascending: false })
     .limit(20)
     .then(function(resp) {
@@ -1077,6 +1081,8 @@ function testSupabaseConnection() {
       showToast('\u2705 \u8fde\u63a5\u6210\u529f\uff01\u6392\u884c\u699c\u5df2\u542f\u7528\u5728\u7ebf\u6a21\u5f0f');
       hideModal();
       updateSettingsUI();
+      /* 连接成功后清除封禁状态 */
+      clearBan();
     }
   });
 }
@@ -1399,6 +1405,9 @@ function switchTab(idx) {
 
 var lbPeriod = 'today';
 var lbInterval = null;
+var _lbTapCount = 0;
+var _lbAdminMode = false;
+var _isBanned = false;  /* 当前用户是否被管理员封禁 */
 
 function getMockUsers(count) {
   var users = [];
@@ -1411,6 +1420,21 @@ function getMockUsers(count) {
 }
 
 function renderLeaderboard() {
+  /* 先检查封禁状态 */
+  checkBanStatus().then(function(banned) {
+    _isBanned = banned;
+    if (_isBanned) {
+      document.getElementById('lbList').innerHTML = '<div class="lb-empty" style="padding:30px 0;"><div style="font-size:2rem;margin-bottom:8px;">🔌</div>\u5df2\u65ad\u5f00\u6392\u884c\u699c\u8fde\u63a5<br><span style="font-size:0.75rem;color:#999;">\u8bf7\u5230\u8bbe\u7f6e\u4e2d\u70b9\u51fb\u201c\u6d4b\u8bd5\u8fde\u63a5\u201d\u91cd\u65b0\u8fde\u63a5</span></div>';
+      document.getElementById('settingSupabaseDesc').textContent = '\u26a0\ufe0f \u5df2\u65ad\u5f00';
+      if (lbInterval) { clearInterval(lbInterval); lbInterval = null; }
+      return;
+    }
+    /* 未封禁，正常渲染 */
+    renderLeaderboardContent();
+  });
+}
+
+function renderLeaderboardContent() {
   var me = getMyAnimal();
   var myTotal = getTodayTotal(gState.records);
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
@@ -1427,7 +1451,8 @@ function renderLeaderboard() {
       var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
       /* 不再内嵌 today_records，改为存 user_id，点击时按需拉取 */
       var uid = u.isMe ? '' : (u.user_id || '');
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" onclick="event.stopPropagation();deleteUserRanking(\'' + uid + '\',\'' + u.name.replace(/'/g, "\\'") + '\')" title="删除此用户排名">✕</span>' : '';
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
   }
@@ -1437,7 +1462,9 @@ function renderLeaderboard() {
   if (onlinePromise) {
     onlinePromise.then(function(data) {
       if (data && data.length > 0) {
-        var mapped = data.map(function(u) {
+        var mapped = data
+          .filter(function(u) { return !u.banned; })  /* 过滤掉被封禁的用户 */
+          .map(function(u) {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
           return {
@@ -1516,7 +1543,7 @@ function showUserRecords(el) {
     var myRecords = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) {
       return { amount: r.amount, time: r.dateTime, mood: r.mood || '' };
     });
-    renderUserRecordsModal(emoji, name, myRecords);
+    renderUserRecordsModal(emoji, name, userId, myRecords);
   } else {
     fetchUserRecords(userId).then(function(data) {
       if (!data) {
@@ -1524,14 +1551,17 @@ function showUserRecords(el) {
         showToast('\u65e0\u6cd5\u52a0\u8f7d\u8be5\u7528\u6237\u6570\u636e');
         return;
       }
-      renderUserRecordsModal(emoji, name, data.today_records || []);
+      renderUserRecordsModal(emoji, name, userId, data.today_records || []);
     });
   }
 }
 
-function renderUserRecordsModal(emoji, name, records) {
+function renderUserRecordsModal(emoji, name, userId, records) {
+  /* 显示简短 user_id，方便区分不同用户 */
+  var shortId = userId ? userId.substring(0, 8) + '...' : '';
+  var titleHtml = emoji + ' ' + name + '<span style="font-size:0.5625rem;color:#999;margin-left:6px;font-weight:400;">' + shortId + '</span>';
   if (!records || records.length === 0) {
-    showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55',
+    showModal(titleHtml + ' \u7684\u4eca\u65e5\u8bb0\u5f55',
       '<div style="text-align:center;padding:20px;color:#999;font-size:0.875rem;">\u6682\u65e0\u8bb0\u5f55</div>',
       [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
     );
@@ -1551,9 +1581,116 @@ function renderUserRecordsModal(emoji, name, records) {
   });
   html += '</div>';
   html += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid #e0e0e0;margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:#4A90E2;">' + total + ' ml</span></div>';
-  showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55', html,
+  showModal(titleHtml + ' \u7684\u4eca\u65e5\u8bb0\u5f55', html,
     [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
   );
+}
+
+/* 排行榜标题连点 5 次进入管理员模式 */
+function onLbTitleTap() {
+  if (_lbAdminMode) return;
+  _lbTapCount++;
+  if (_lbTapCount === 3) {
+    showToast('\u518d\u70b9 2 \u6b21\u8fdb\u5165\u7ba1\u7406\u5458\u6a21\u5f0f');
+  } else if (_lbTapCount === 5) {
+    _lbTapCount = 0;
+    _lbAdminMode = true;
+    toggleAdminUI();
+    showToast('🔧 \u7ba1\u7406\u5458\u6a21\u5f0f\u5df2\u5f00\u542f');
+  } else if (_lbTapCount > 5) {
+    _lbTapCount = 0;
+  }
+}
+
+function exitAdminMode() {
+  _lbAdminMode = false;
+  toggleAdminUI();
+  showToast('\u5df2\u9000\u51fa\u7ba1\u7406\u5458\u6a21\u5f0f');
+}
+
+function toggleAdminUI() {
+  var badge = document.getElementById('lbAdminBadge');
+  var exitBtn = document.getElementById('lbExitAdmin');
+  if (badge) badge.style.display = _lbAdminMode ? '' : 'none';
+  if (exitBtn) exitBtn.style.display = _lbAdminMode ? '' : 'none';
+  renderLeaderboard();  /* 刷新列表显示删除按钮 */
+}
+
+function deleteUserRanking(userId, userName) {
+  if (!_lbAdminMode) return;
+  /* 第一步确认 */
+  showModal('🔧 \u5220\u9664\u6392\u540d',
+    '\u786e\u5b9a\u8981\u5220\u9664 <b>' + userName + '</b> \u7684\u6392\u884c\u699c\u6570\u636e\u5417\uff1f',
+    [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+     { text: '\u5220\u9664', cls: 'btn-danger', action: function() {
+      hideModal();
+      /* 第二步确认 */
+      showModal('🔧 \u518d\u6b21\u786e\u8ba4',
+        '\u8bf7\u518d\u6b21\u786e\u8ba4\u5220\u9664 <b>' + userName + '</b> \u7684\u6392\u540d\uff1f\u6b64\u64cd\u4f5c\u4e0d\u4f1a\u5f71\u54cd\u5bf9\u65b9\u672c\u5730\u6570\u636e\u3002',
+        [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
+         { text: '\u786e\u8ba4\u5220\u9664', cls: 'btn-danger', action: function() {
+          if (!isSupabaseConfigured()) { showToast('\u6392\u884c\u699c\u672a\u914d\u7f6e'); return; }
+          var client = getSupabaseClient();
+          if (!client) { showToast('\u8fde\u63a5\u5931\u8d25'); return; }
+          hideModal();
+          banUserOnCloud(client, userId, userName);
+        }}]
+      );
+    }}]
+  );
+}
+
+/* 管理员封禁用户：删除排行榜数据并标记 banned=true */
+function banUserOnCloud(client, userId, userName) {
+  client.from('leaderboard').delete().eq('user_id', userId).then(function(resp) {
+    if (resp.error) { showToast('\u64cd\u4f5c\u5931\u8d25\uff1a' + resp.error.message); return; }
+    /* 再插入一条标记为封禁（使对方下次加载时能检测到） */
+    return client.from('leaderboard').upsert({
+      user_id: userId,
+      banned: true,
+      today_ml: 0,
+      nickname: userName + '(已断开)',
+      today_records: [],
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  }).then(function(resp2) {
+    if (resp2 && resp2.error) { showToast('\u5c01\u7981\u5931\u8d25\uff1a' + resp2.error.message); return; }
+    showToast('\u5df2\u65ad\u5f00 ' + userName + ' \u7684\u6392\u884c\u699c\u8fde\u63a5');
+    renderLeaderboard();
+  });
+}
+
+/* 检测当前用户是否被封禁 */
+function checkBanStatus() {
+  if (!isSupabaseConfigured()) return Promise.resolve(false);
+  var client = getSupabaseClient();
+  if (!client) return Promise.resolve(false);
+  return client
+    .from('leaderboard')
+    .select('banned')
+    .eq('user_id', getAnonUserId())
+    .maybeSingle()
+    .then(function(resp) {
+      if (resp.error) { return false; }
+      return resp.data && resp.data.banned === true;
+    });
+}
+
+/* 清除封禁（"测试连接"成功后调用） */
+function clearBan() {
+  if (!isSupabaseConfigured()) return Promise.resolve();
+  var client = getSupabaseClient();
+  if (!client) return Promise.resolve();
+  return client
+    .from('leaderboard')
+    .upsert({
+      user_id: getAnonUserId(),
+      banned: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
+    .then(function(resp) {
+      if (resp.error) console.warn('Clear ban failed:', resp.error);
+    });
 }
 
 function switchLB(period) {

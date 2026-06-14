@@ -451,8 +451,14 @@ function getSupabaseClient() {
 /* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
 function syncTodayToLeaderboard(skipPull) {
   if (!isSupabaseConfigured()) return Promise.resolve();
-  var client = getSupabaseClient();
-  if (!client) return Promise.resolve();
+  var cfg = loadSupabaseConfig();
+  var baseUrl = cfg.url.replace(/\/$/, '');
+  var headers = {
+    'Content-Type': 'application/json',
+    'apikey': cfg.key,
+    'Authorization': 'Bearer ' + cfg.key,
+    'Prefer': 'resolution=merge-duplicates'
+  };
   /* 先拉取云端今日记录合并到本地，防止覆盖其他设备的数据 */
   var doPush = function() {
     var me = getMyAnimal();
@@ -463,9 +469,10 @@ function syncTodayToLeaderboard(skipPull) {
       return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
     });
     syncDebug('📤 推送 ' + todayRecords.length + ' 条记录, 总量 ' + total + 'ml');
-    return client
-      .from('leaderboard')
-      .upsert({
+    return fetch(baseUrl + '/rest/v1/leaderboard', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
         user_id: getAnonUserId(),
         nickname: me.name,
         avatar_idx: me.idx,
@@ -474,10 +481,10 @@ function syncTodayToLeaderboard(skipPull) {
         today_records: todayRecords,
         banned: false,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' })
-      .then(function(resp) {
-        if (resp.error) console.warn('Sync to leaderboard failed:', resp.error);
-      });
+      })
+    }).then(function(resp) {
+      if (!resp.ok && resp.status !== 409) console.warn('Push failed:', resp.status);
+    });
   };
   if (skipPull) return doPush();
   return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
@@ -536,18 +543,28 @@ function fetchUserRecords(userId) {
 /* 拉取当前用户在云端的今日记录（用于设备间同步合并） */
 function fetchMyTodayRecordsFromCloud() {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
-  var client = getSupabaseClient();
-  if (!client) return Promise.resolve(null);
   var uid = getAnonUserId();
-  return client
-    .from('leaderboard')
-    .select('today_records,today_ml,streak')
-    .eq('user_id', uid)
-    .maybeSingle()
-    .then(function(resp) {
-      if (resp.error) { console.warn('Fetch my records failed:', resp.error); return null; }
-      return resp.data ? resp.data.today_records : null;
-    });
+  /* 直接用 fetch 绕过 SDK 可能的缓存问题 */
+  var cfg = loadSupabaseConfig();
+  if (!cfg.url || !cfg.key) return Promise.resolve(null);
+  var url = cfg.url.replace(/\/$/, '') + '/rest/v1/leaderboard?select=today_records&user_id=eq.' + encodeURIComponent(uid) + '&limit=1';
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      'apikey': cfg.key,
+      'Authorization': 'Bearer ' + cfg.key
+    },
+    cache: 'no-store'
+  }).then(function(resp) {
+    if (!resp.ok) { console.warn('Fetch failed:', resp.status); return null; }
+    return resp.json();
+  }).then(function(data) {
+    if (!data || !Array.isArray(data) || data.length === 0) return null;
+    return data[0].today_records || null;
+  }).catch(function(e) {
+    console.warn('Fetch my records error:', e);
+    return null;
+  });
 }
 
 /* 将云端今日记录合并到本地 records（按 id 去重） */

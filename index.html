@@ -644,18 +644,9 @@ function renderSyncDebug() {
   wrap.style.display = 'block';
 
   var isExpanded = full.style.display === 'block';
-  var showLines = isExpanded ? _syncLogs.length : Math.min(_syncLogs.length, _syncLogMaxSummary);
-  var summaryHtml = '';
-  for (var i = 0; i < showLines; i++) {
-    summaryHtml += '<div>' + _syncLogs[i] + '</div>';
-  }
-  if (_syncLogs.length > _syncLogMaxSummary && !isExpanded) {
-    summaryHtml += '<div style="color:#4A90E2;font-weight:600;margin-top:2px;">▼ 展开全部 (' + _syncLogs.length + ' 条)</div>';
-  }
-  summary.innerHTML = summaryHtml;
-
-  /* 完整日志 */
   if (isExpanded) {
+    /* 展开：隐藏摘要区，完整区显示全部 */
+    summary.style.display = 'none';
     var fullHtml = '';
     for (var i = 0; i < _syncLogs.length; i++) {
       fullHtml += '<div>' + _syncLogs[i] + '</div>';
@@ -663,6 +654,20 @@ function renderSyncDebug() {
     fullHtml += '<div style="color:#999;margin-top:4px;cursor:pointer;text-align:center;" onclick="toggleSyncDebug()">▲ 收起</div>';
     full.innerHTML = fullHtml;
     full.scrollTop = full.scrollHeight;
+    full.style.display = 'block';
+  } else {
+    /* 收起：显示摘要前 6 行，隐藏完整区 */
+    summary.style.display = 'block';
+    full.style.display = 'none';
+    var showLines = Math.min(_syncLogs.length, _syncLogMaxSummary);
+    var summaryHtml = '';
+    for (var i = 0; i < showLines; i++) {
+      summaryHtml += '<div>' + _syncLogs[i] + '</div>';
+    }
+    if (_syncLogs.length > _syncLogMaxSummary) {
+      summaryHtml += '<div style="color:#4A90E2;font-weight:600;margin-top:2px;">▼ 展开全部 (' + _syncLogs.length + ' 条)</div>';
+    }
+    summary.innerHTML = summaryHtml;
   }
 }
 

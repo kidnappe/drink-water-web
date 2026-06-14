@@ -346,7 +346,10 @@
       <div class="setting-info"><div class="setting-label">立即同步</div><div class="setting-desc">手动触发一次双向数据同步</div></div>
       <span class="setting-arrow">›</span>
     </div>
-    <div id="syncDebug" style="display:none;font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;margin:4px 0;line-height:1.6;word-break:break-all;"></div>
+    <div id="syncDebugWrap" style="display:none;margin:6px 0;">
+      <div id="syncDebugSummary" style="font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;line-height:1.6;cursor:pointer;" onclick="toggleSyncDebug()"></div>
+      <div id="syncDebugFull" style="display:none;font-size:0.6875rem;color:#555;background:#f0f2f5;border-radius:0 0 8px 8px;padding:8px 10px;line-height:1.5;max-height:300px;overflow-y:auto;word-break:break-all;border-top:1px solid #e0e0e0;"></div>
+    </div>
     <div class="setting-item" onclick="disconnectLeaderboard()" style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:12px;">
       <span class="setting-icon">🔌</span>
       <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">断开排行榜</div><div class="setting-desc">清除云端连接，恢复为本地模式</div></div>
@@ -449,70 +452,38 @@ function getSupabaseClient() {
 }
 
 /* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
-function syncTodayToLeaderboard(skipPull) {
+function syncTodayToLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve();
-  var cfg = loadSupabaseConfig();
-  var baseUrl = cfg.url.replace(/\/$/, '');
-  var headers = {
-    'Content-Type': 'application/json',
-    'apikey': cfg.key,
-    'Authorization': 'Bearer ' + cfg.key,
-    'Prefer': 'resolution=merge-duplicates'
-  };
-  /* 先拉取云端今日记录合并到本地，防止覆盖其他设备的数据 */
-  var doPush = function() {
-    var me = getMyAnimal();
-    var total = getTodayTotal(gState.records);
-    var streak = calcStreak(gState.records, gState.settings.dailyGoal);
-    var todayKey = getDateKey(new Date());
-    var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
-      return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
-    });
-    syncDebug('📤 推送 ' + todayRecords.length + ' 条记录, 总量 ' + total + 'ml');
-    return fetch(baseUrl + '/rest/v1/leaderboard', {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        user_id: getAnonUserId(),
-        nickname: me.name,
-        avatar_idx: me.idx,
-        today_ml: total,
-        streak: streak,
-        today_records: todayRecords,
-        banned: false,
-        updated_at: new Date().toISOString()
-      })
-    }).then(function(resp) {
-      if (resp.ok || resp.status === 409) {
-        syncDebug('✅ 推送成功 (HTTP ' + resp.status + ')');
-      } else {
-        syncDebug('❌ 推送失败 (HTTP ' + resp.status + ')');
-      }
-    }, function(err) {
-      syncDebug('❌ 推送异常: ' + err.message);
-    });
-  };
-  if (skipPull) return doPush();
-  return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
-    var todayKey = getDateKey(new Date());
-    var localIds = {};
-    gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
-    if (cloudRecs && Array.isArray(cloudRecs)) {
-      cloudRecs.forEach(function(cr) {
-        if (!cr.id || localIds[cr.id]) return;
-        gState.records.push({
-          id: cr.id,
-          amount: cr.amount,
-          dateTime: cr.time,
-          dateKey: todayKey,
-          mood: cr.mood || ''
-        });
-        localIds[cr.id] = true;
-      });
-      if (gState.records.length > 0) saveRecords(gState.records);
-    }
-    return doPush();
+  var me = getMyAnimal();
+  var total = getTodayTotal(gState.records);
+  var streak = calcStreak(gState.records, gState.settings.dailyGoal);
+  var todayKey = getDateKey(new Date());
+  var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
+    return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
   });
+  syncDebug('📤 推送 ' + todayRecords.length + ' 条, 总量 ' + total + 'ml, 连续 ' + streak + ' 天');
+  syncDebug('📤 推送记录 ID: ' + todayRecords.map(function(r) { return r.id.substring(0, 6); }).join(', '));
+  var client = getSupabaseClient();
+  if (!client) { syncDebug('❌ 推送失败：无法创建 Supabase 客户端'); return Promise.resolve(); }
+  return client
+    .from('leaderboard')
+    .upsert({
+      user_id: getAnonUserId(),
+      nickname: me.name,
+      avatar_idx: me.idx,
+      today_ml: total,
+      streak: streak,
+      today_records: todayRecords,
+      banned: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
+    .then(function(resp) {
+      if (resp.error) {
+        syncDebug('❌ 推送失败: ' + resp.error.message);
+      } else {
+        syncDebug('✅ 推送成功');
+      }
+    });
 }
 
 /* 从 Supabase 获取在线排行榜（最多 20 条） */
@@ -562,13 +533,25 @@ function fetchMyTodayRecordsFromCloud() {
     },
     cache: 'no-store'
   }).then(function(resp) {
-    if (!resp.ok) { console.warn('Fetch failed:', resp.status); return null; }
+    syncDebug('🔍 HTTP ' + resp.status + ' ' + resp.statusText);
+    if (!resp.ok) { syncDebug('🔍 请求失败'); return null; }
     return resp.json();
   }).then(function(data) {
-    if (!data || !Array.isArray(data) || data.length === 0) return null;
-    return data[0].today_records || null;
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      syncDebug('🔍 返回空，无云端记录');
+      return null;
+    }
+    var recs = data[0].today_records || [];
+    syncDebug('🔍 返回 today_records: ' + recs.length + ' 条');
+    if (recs.length > 0) {
+      var details = recs.map(function(r) {
+        return (r.id || '').substring(0, 6) + '=' + (r.amount || 0) + 'ml' + (r.mood || '');
+      }).join(', ');
+      syncDebug('🔍 记录详情: ' + details);
+    }
+    return recs;
   }).catch(function(e) {
-    console.warn('Fetch my records error:', e);
+    syncDebug('🔍 网络异常: ' + (e.message || e));
     return null;
   });
 }
@@ -577,12 +560,17 @@ function fetchMyTodayRecordsFromCloud() {
 function mergeCloudTodayRecords() {
   if (!isSupabaseConfigured()) return Promise.resolve(0);
   return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
-    if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) return 0;
+    if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) {
+      syncDebug('📥 云端无数据可合并');
+      return 0;
+    }
     var localIds = {};
     var todayKey = getDateKey(new Date());
     /* 建立本地今日记录 id 索引 */
     gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
+    syncDebug('📥 本地已有 ' + Object.keys(localIds).length + ' 条, 云端 ' + cloudRecs.length + ' 条');
     var merged = 0;
+    var mergedIds = [];
     cloudRecs.forEach(function(cr) {
       if (!cr.id) return;
       if (!localIds[cr.id]) {
@@ -595,10 +583,14 @@ function mergeCloudTodayRecords() {
           mood: cr.mood || ''
         });
         merged++;
+        mergedIds.push(cr.id.substring(0, 6));
       }
     });
     if (merged > 0) {
+      syncDebug('📥 合并了 ' + merged + ' 条: ' + mergedIds.join(', '));
       saveRecords(gState.records);
+    } else {
+      syncDebug('📥 无新记录（云端 ID 全部已在本地）');
     }
     return merged;
   });
@@ -629,17 +621,56 @@ function generatePairingCode() {
     });
 }
 
-/* 同步调试日志（在设置页显示） */
+/* 同步调试日志（在设置页显示，可展开/收起） */
+var _syncLogs = [];
+var _syncLogMaxSummary = 6;  /* 摘要区最多显示行数 */
+
 function syncDebug(msg) {
-  var el = document.getElementById('syncDebug');
-  if (!el) return;
-  el.style.display = 'block';
-  el.innerHTML = el.innerHTML + '<div>' + msg + '</div>';
-  el.scrollTop = el.scrollHeight;
+  _syncLogs.push(msg);
+  renderSyncDebug();
 }
+
 function syncDebugClear() {
-  var el = document.getElementById('syncDebug');
-  if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+  _syncLogs = [];
+  var wrap = document.getElementById('syncDebugWrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function renderSyncDebug() {
+  var wrap = document.getElementById('syncDebugWrap');
+  var summary = document.getElementById('syncDebugSummary');
+  var full = document.getElementById('syncDebugFull');
+  if (!wrap || !summary || !full) return;
+  wrap.style.display = 'block';
+
+  var isExpanded = full.style.display === 'block';
+  var showLines = isExpanded ? _syncLogs.length : Math.min(_syncLogs.length, _syncLogMaxSummary);
+  var summaryHtml = '';
+  for (var i = 0; i < showLines; i++) {
+    summaryHtml += '<div>' + _syncLogs[i] + '</div>';
+  }
+  if (_syncLogs.length > _syncLogMaxSummary && !isExpanded) {
+    summaryHtml += '<div style="color:#4A90E2;font-weight:600;margin-top:2px;">▼ 展开全部 (' + _syncLogs.length + ' 条)</div>';
+  }
+  summary.innerHTML = summaryHtml;
+
+  /* 完整日志 */
+  if (isExpanded) {
+    var fullHtml = '';
+    for (var i = 0; i < _syncLogs.length; i++) {
+      fullHtml += '<div>' + _syncLogs[i] + '</div>';
+    }
+    fullHtml += '<div style="color:#999;margin-top:4px;cursor:pointer;text-align:center;" onclick="toggleSyncDebug()">▲ 收起</div>';
+    full.innerHTML = fullHtml;
+    full.scrollTop = full.scrollHeight;
+  }
+}
+
+function toggleSyncDebug() {
+  var full = document.getElementById('syncDebugFull');
+  if (!full) return;
+  full.style.display = full.style.display === 'block' ? 'none' : 'block';
+  renderSyncDebug();
 }
 
 /* 强制双向同步：先推本地数据，再拉云端合并 */
@@ -654,54 +685,32 @@ function forceSync() {
   var phoneMl = phoneLocal.reduce(function(s, r) { return s + r.amount; }, 0);
   syncDebug('📱 手机本地: ' + phoneLocal.length + ' 条, ' + phoneMl + 'ml');
 
-  /* 拉取云端数据，与手机本地对比 */
-  fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
-    var cloudMl = 0;
-    var cloudCount = 0;
-    if (cloudRecs && Array.isArray(cloudRecs)) {
-      cloudCount = cloudRecs.length;
-      cloudRecs.forEach(function(r) { cloudMl += r.amount || 0; });
-    }
-    syncDebug('☁️ 云端合计: ' + cloudCount + ' 条, ' + cloudMl + 'ml');
-
-    var watchCount = 0;
-    var watchMl = 0;
-    if (cloudRecs && Array.isArray(cloudRecs)) {
-      var phoneIds = {};
-      phoneLocal.forEach(function(r) { phoneIds[r.id] = true; });
-      cloudRecs.forEach(function(cr) {
-        if (!cr.id || phoneIds[cr.id]) return;
-        watchCount++;
-        watchMl += cr.amount || 0;
-        phoneIds[cr.id] = true;
+  /* 与手表版一致的流程：先推 → 再拉合并 */
+  syncDebug('📤 推送本地数据到云端...');
+  syncTodayToLeaderboard().then(function() {
+    syncDebug('📥 拉取云端记录合并到本地...');
+    return mergeCloudTodayRecords();
+  }).then(function(merged) {
+    var afterLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
+    var afterMl = afterLocal.reduce(function(s, r) { return s + r.amount; }, 0);
+    syncDebug('✅ 同步完成');
+    syncDebug('📱 手机本地现在: ' + afterLocal.length + ' 条, ' + afterMl + 'ml');
+    if (merged > 0) {
+      syncDebug('⌚ 本次合并了 ' + merged + ' 条手表记录 ✅');
+    } else {
+      /* 再查一次云端，判断是不是没有手表数据 */
+      fetchMyTodayRecordsFromCloud().then(function(recs) {
+        var cc = recs && Array.isArray(recs) ? recs.length : 0;
+        syncDebug('☁️ 云端现有 ' + cc + ' 条记录');
+        if (cc === afterLocal.length) {
+          syncDebug('⌚ 未检测到手表的记录 ❌');
+        } else {
+          syncDebug('⌚ 云端比本地多 ' + (cc - afterLocal.length) + ' 条');
+        }
       });
     }
-
-    if (watchCount > 0) {
-      syncDebug('⌚ 检测到手表的记录: ' + watchCount + ' 条, ' + watchMl + 'ml ✅');
-    } else {
-      syncDebug('⌚ 未检测到手表的记录 ❌');
-      syncDebug('');
-      syncDebug('💡 可能原因:');
-      syncDebug('   1. 手表尚未推送数据到云端');
-      syncDebug('   2. 手表端的 Supabase 配置与手机不同');
-      syncDebug('   3. 手表端的 user_id 实际与手机不同');
-    }
-
-    /* 现在合并并推送 */
-    syncDebug('📥 合并云端记录到本地...');
-    return mergeCloudTodayRecords().then(function(merged) {
-      syncDebug('   合并了 ' + merged + ' 条新记录');
-      syncDebug('📤 推送合并后数据到云端...');
-      return syncTodayToLeaderboard();
-    }).then(function() {
-      var afterLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
-      var afterMl = afterLocal.reduce(function(s, r) { return s + r.amount; }, 0);
-      syncDebug('✅ 同步完成');
-      syncDebug('📱 手机本地现在: ' + afterLocal.length + ' 条, ' + afterMl + 'ml');
-      refreshUI();
-      showToast('同步完成');
-    });
+    refreshUI();
+    showToast('同步完成');
   }).catch(function(e) {
     var msg = e && e.message ? e.message : '未知错误';
     if (e && e.toString) msg = e.toString();
@@ -1259,7 +1268,7 @@ function deleteRecord(id) {
   saveRecords(gState.records);
   var afterCount = gState.records.length;
   syncDebug('🗑️ 删除记录，本地剩余 ' + afterCount + ' 条');
-  syncTodayToLeaderboard(true).then(function() {
+  syncTodayToLeaderboard().then(function() {
     syncDebug('✅ 已推送删除后的数据到云端');
     /* 推完后立刻拉取验证 */
     fetchMyTodayRecordsFromCloud().then(function(recs) {

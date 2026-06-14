@@ -535,21 +535,18 @@ function fetchUserRecords(userId) {
 }
 /* 拉取当前用户在云端的今日记录（用于设备间同步合并） */
 function fetchMyTodayRecordsFromCloud() {
-  if (!isSupabaseConfigured()) { syncDebug('⚠️ Supabase 未配置，跳过云端拉取'); return Promise.resolve(null); }
+  if (!isSupabaseConfigured()) return Promise.resolve(null);
   var client = getSupabaseClient();
-  if (!client) { syncDebug('⚠️ 无法创建 Supabase 客户端'); return Promise.resolve(null); }
+  if (!client) return Promise.resolve(null);
   var uid = getAnonUserId();
-  syncDebug('🔍 查询云端 user_id=' + uid.substring(0, 8) + '...');
   return client
     .from('leaderboard')
-    .select('today_records')
+    .select('today_records,today_ml,streak')
     .eq('user_id', uid)
     .maybeSingle()
     .then(function(resp) {
-      if (resp.error) { syncDebug('❌ 查询失败: ' + resp.error.message); console.warn('Fetch my records failed:', resp.error); return null; }
-      var recs = resp.data ? resp.data.today_records : null;
-      syncDebug('📦 云端返回 today_records: ' + (recs ? recs.length + ' 条' : '空'));
-      return recs;
+      if (resp.error) { console.warn('Fetch my records failed:', resp.error); return null; }
+      return resp.data ? resp.data.today_records : null;
     });
 }
 
@@ -628,19 +625,64 @@ function forceSync() {
   syncDebugClear();
   syncDebug('🔄 开始同步...');
   syncDebug('用户 ID: ' + getAnonUserId().substring(0, 8) + '...');
-  /* 先拉取云端数据合并到本地，再推送合并后的完整数据到云端 */
-  mergeCloudTodayRecords().then(function(count) {
-    syncDebug('📥 拉取云端完成，合并了 ' + count + ' 条记录');
-    syncDebug('📤 推送本地数据到云端...');
-    return syncTodayToLeaderboard();
-  }).then(function() {
-    syncDebug('✅ 同步完成');
-    syncDebug('本地今日记录数: ' + getTodayRecords(gState.records).length);
-    syncDebug('今日总水量: ' + getTodayTotal(gState.records) + 'ml');
-    refreshUI();
-    showToast('同步完成');
+
+  var todayKey = getDateKey(new Date());
+  var phoneLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
+  var phoneMl = phoneLocal.reduce(function(s, r) { return s + r.amount; }, 0);
+  syncDebug('📱 手机本地: ' + phoneLocal.length + ' 条, ' + phoneMl + 'ml');
+
+  /* 拉取云端数据，与手机本地对比 */
+  fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
+    var cloudMl = 0;
+    var cloudCount = 0;
+    if (cloudRecs && Array.isArray(cloudRecs)) {
+      cloudCount = cloudRecs.length;
+      cloudRecs.forEach(function(r) { cloudMl += r.amount || 0; });
+    }
+    syncDebug('☁️ 云端合计: ' + cloudCount + ' 条, ' + cloudMl + 'ml');
+
+    var watchCount = 0;
+    var watchMl = 0;
+    if (cloudRecs && Array.isArray(cloudRecs)) {
+      var phoneIds = {};
+      phoneLocal.forEach(function(r) { phoneIds[r.id] = true; });
+      cloudRecs.forEach(function(cr) {
+        if (!cr.id || phoneIds[cr.id]) return;
+        watchCount++;
+        watchMl += cr.amount || 0;
+        phoneIds[cr.id] = true;
+      });
+    }
+
+    if (watchCount > 0) {
+      syncDebug('⌚ 检测到手表的记录: ' + watchCount + ' 条, ' + watchMl + 'ml ✅');
+    } else {
+      syncDebug('⌚ 未检测到手表的记录 ❌');
+      syncDebug('');
+      syncDebug('💡 可能原因:');
+      syncDebug('   1. 手表尚未推送数据到云端');
+      syncDebug('   2. 手表端的 Supabase 配置与手机不同');
+      syncDebug('   3. 手表端的 user_id 实际与手机不同');
+    }
+
+    /* 现在合并并推送 */
+    syncDebug('📥 合并云端记录到本地...');
+    return mergeCloudTodayRecords().then(function(merged) {
+      syncDebug('   合并了 ' + merged + ' 条新记录');
+      syncDebug('📤 推送合并后数据到云端...');
+      return syncTodayToLeaderboard();
+    }).then(function() {
+      var afterLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
+      var afterMl = afterLocal.reduce(function(s, r) { return s + r.amount; }, 0);
+      syncDebug('✅ 同步完成');
+      syncDebug('📱 手机本地现在: ' + afterLocal.length + ' 条, ' + afterMl + 'ml');
+      refreshUI();
+      showToast('同步完成');
+    });
   }).catch(function(e) {
-    syncDebug('❌ 同步失败: ' + (e && e.message ? e.message : '未知错误'));
+    var msg = e && e.message ? e.message : '未知错误';
+    if (e && e.toString) msg = e.toString();
+    syncDebug('❌ 同步失败: ' + msg);
     showToast('同步失败，请检查网络');
   });
 }

@@ -1148,7 +1148,8 @@ function showEffectsGuide() {
 }
 
 function showAboutDialog() {
-  showModal('\u5173\u4e8e\u5e94\u7528', '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;"><div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div><b>\u559d\u6c34\u8bb0\u5f55 v1.0</b><br>\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef</div>', [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
+  var uid = localStorage.getItem('drink_water_user_id') || '\u672a\u751f\u6210';
+  showModal('\u5173\u4e8e\u5e94\u7528', '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;"><div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div><b>\u559d\u6c34\u8bb0\u5f55 v1.0</b><br>\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef<br><br><span style="font-size:0.625rem;color:#999;word-break:break-all;">ID: ' + uid + '</span></div>', [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
 }
 
 /* ── Supabase 配置对话框 ── */

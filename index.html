@@ -448,33 +448,16 @@ function getSupabaseClient() {
 }
 
 /* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
-function syncTodayToLeaderboard() {
+function syncTodayToLeaderboard(skipPull) {
   if (!isSupabaseConfigured()) return Promise.resolve();
   var client = getSupabaseClient();
   if (!client) return Promise.resolve();
   /* 先拉取云端今日记录合并到本地，防止覆盖其他设备的数据 */
-  return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
-    var todayKey = getDateKey(new Date());
-    var localIds = {};
-    gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
-    if (cloudRecs && Array.isArray(cloudRecs)) {
-      cloudRecs.forEach(function(cr) {
-        if (!cr.id || localIds[cr.id]) return;
-        gState.records.push({
-          id: cr.id,
-          amount: cr.amount,
-          dateTime: cr.time,
-          dateKey: todayKey,
-          mood: cr.mood || ''
-        });
-        localIds[cr.id] = true;
-      });
-      if (gState.records.length > 0) saveRecords(gState.records);
-    }
-    /* 现在本地已包含所有设备的今日记录，推上去 */
+  var doPush = function() {
     var me = getMyAnimal();
     var total = getTodayTotal(gState.records);
     var streak = calcStreak(gState.records, gState.settings.dailyGoal);
+    var todayKey = getDateKey(new Date());
     var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
       return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
     });
@@ -493,6 +476,27 @@ function syncTodayToLeaderboard() {
       .then(function(resp) {
         if (resp.error) console.warn('Sync to leaderboard failed:', resp.error);
       });
+  };
+  if (skipPull) return doPush();
+  return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
+    var todayKey = getDateKey(new Date());
+    var localIds = {};
+    gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
+    if (cloudRecs && Array.isArray(cloudRecs)) {
+      cloudRecs.forEach(function(cr) {
+        if (!cr.id || localIds[cr.id]) return;
+        gState.records.push({
+          id: cr.id,
+          amount: cr.amount,
+          dateTime: cr.time,
+          dateKey: todayKey,
+          mood: cr.mood || ''
+        });
+        localIds[cr.id] = true;
+      });
+      if (gState.records.length > 0) saveRecords(gState.records);
+    }
+    return doPush();
   });
 }
 
@@ -1161,7 +1165,7 @@ function addWater(amount) {
 function deleteRecord(id) {
   gState.records = gState.records.filter(function(r) { return r.id !== id; });
   saveRecords(gState.records);
-  syncTodayToLeaderboard(); /* 同步更新后的今日总量到在线排行榜 */
+  syncTodayToLeaderboard(true); /* 跳过拉取合并，直接推送删除后的结果 */
   refreshUI();
   showToast('\u8bb0\u5f55\u5df2\u5220\u9664');
 }

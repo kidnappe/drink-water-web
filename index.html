@@ -1,35 +1,50 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/option-cup.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="喝水记录">
+  <meta name="apple-mobile-web-app-title" content="��ˮ��¼">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>喝杯水吧</title>
+  <title>�ȱ�ˮ��</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f0f4fb; color: #333; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+    :root {
+      --primary: #4A90E2;
+      --primary-dark: #3D7BD5;
+      --danger: #e74c3c;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --bg: #f0f4fb;
+      --text: #333;
+      --text-secondary: #999;
+      --border: #e0e0e0;
+      --border-light: #f0f0f0;
+      --card-bg: #fff;
+      --nav-bg: #fff;
+    }
+    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
     .page { display: none; padding: 16px 16px 80px; }
     .page.active { display: block; }
-    .appbar { background: #4A90E2; color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
-    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; display: flex; border-top: 1px solid #e0e0e0; z-index: 100; }
-    .bottom-nav button { flex: 1; border: none; background: none; padding: 10px 0 8px; font-size: 0.75rem; color: #999; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .2s; }
+    .appbar { background: var(--primary); color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--nav-bg); display: flex; border-top: 1px solid var(--border); z-index: 100; }
+    .bottom-nav button { flex: 1; border: none; background: none; padding: 10px 0 8px; font-size: 0.75rem; color: var(--text-secondary); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .2s; }
     .bottom-nav button .icon { font-size: 1.375rem; }
-    .bottom-nav button.active { color: #4A90E2; }
-    .lb-card { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
+    .bottom-nav button.active { color: var(--primary); }
+    .lb-card { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
     .lb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .lb-header h3 { font-size: 0.9375rem; font-weight: 600; margin: 0; }
-    .lb-refresh { font-size: 0.875rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; border: none; background: #f0f4fb; color: #4A90E2; transition: all .2s; flex-shrink: 0; margin-left: 6px; }
+    .lb-refresh { font-size: 0.875rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; border: none; background: var(--bg); color: var(--primary); transition: all .2s; flex-shrink: 0; margin-left: 6px; }
     .lb-refresh:hover { background: #e0e8f5; }
     .lb-refresh:disabled { opacity: .4; cursor: not-allowed; }
     .lb-refresh.spinning { animation: lbSpin .6s linear infinite; }
     @keyframes lbSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .lb-tabs { display: flex; gap: 4px; }
     .lb-tabs button { padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.75rem; transition: all .2s; color: #666; }
-    .lb-tabs button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; }
-    .mood-help { font-size: 0.8125rem; cursor: pointer; margin-left: 6px; color: #4A90E2; opacity: .85; transition: opacity .2s; vertical-align: middle; background: #e8f0fe; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+    .lb-tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .mood-help { font-size: 0.8125rem; cursor: pointer; margin-left: 6px; color: var(--primary); opacity: .85; transition: opacity .2s; vertical-align: middle; background: #e8f0fe; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
     .mood-help:hover { opacity: 1; background: #d0e2f8; }
     .dark-mode .mood-help { color: #7bb3e8; background: rgba(74,144,226,.2); }
     .lb-list { display: flex; flex-direction: column; gap: 6px; }
@@ -44,11 +59,11 @@
     .lb-info { flex: 1; min-width: 0; }
     .lb-name { font-size: 0.8125rem; font-weight: 500; color: #333; }
     .lb-streak { font-size: 0.6875rem; color: #999; margin-top: 2px; }
-    .lb-amount { font-size: 1rem; font-weight: 700; color: #4A90E2; flex-shrink: 0; text-align: right; }
+    .lb-amount { font-size: 1rem; font-weight: 700; color: var(--primary); flex-shrink: 0; text-align: right; }
     .lb-unit { font-size: 0.6875rem; color: #aaa; font-weight: 400; }
-    .lb-me { background: #e8f0fe !important; border-color: #4A90E2; box-shadow: 0 0 0 2px rgba(74,144,226,.15); position: relative; }
-    .lb-me-tag { position: absolute; top: -6px; right: 8px; background: #4A90E2; color: #fff; font-size: 0.625rem; padding: 1px 8px; border-radius: 8px; font-weight: 600; }
-.lb-admin-del { display:inline-block;color:#e74c3c;cursor:pointer;font-size:0.75rem;font-weight:700;padding:0 3px;vertical-align:middle; }
+    .lb-me { background: #e8f0fe !important; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(74,144,226,.15); position: relative; }
+    .lb-me-tag { position: absolute; top: -6px; right: 8px; background: var(--primary); color: #fff; font-size: 0.625rem; padding: 1px 8px; border-radius: 8px; font-weight: 600; }
+.lb-admin-del { display:inline-block;color:var(--danger);cursor:pointer;font-size:0.75rem;font-weight:700;padding:0 3px;vertical-align:middle; }
     .lb-empty { text-align: center; padding: 30px 0; color: #999; font-size: 0.8125rem; }
     .lb-footer { font-size: 0.75rem; color: #aaa; text-align: center; padding: 10px; line-height: 1.6; }
     .card { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 10px; }
@@ -58,8 +73,8 @@
     .plant-name { font-size: 0.875rem; color: #666; margin-top: 4px; }
     .progress-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
     .cup-container { width: 95px; height: 115px; position: relative; }
-    .cup-body { width: 100%; height: 100%; border: 3px solid #4A90E2; border-top: none; border-radius: 0 0 14px 14px; position: relative; overflow: hidden; background: rgba(74,144,226,.04); }
-    .cup-body::before { content: ''; position: absolute; top: -3px; left: -4px; right: -4px; height: 7px; background: #4A90E2; border-radius: 4px; }
+    .cup-body { width: 100%; height: 100%; border: 3px solid var(--primary); border-top: none; border-radius: 0 0 14px 14px; position: relative; overflow: hidden; background: rgba(74,144,226,.04); }
+    .cup-body::before { content: ''; position: absolute; top: -3px; left: -4px; right: -4px; height: 7px; background: var(--primary); border-radius: 4px; }
     .water-area { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; transition: height 0.8s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
     .water-fill-bg { position: absolute; bottom: 0; left: 0; right: 0; top: 0; background: linear-gradient(180deg, rgba(74,144,226,0.35) 0%, rgba(74,144,226,0.65) 100%); }
     .cup-wave { position: absolute; top: -4px; left: 0; width: 100%; height: 8px; }
@@ -68,7 +83,7 @@
     .cup-wave .w2 { animation: hmWaveSway 2s ease-in-out infinite alternate-reverse; }
     .water-highlight { position: absolute; top: 0; left: 10%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); opacity: 0.4; }
     @keyframes hmWaveSway { 0% { transform: translateX(-2px); } 100% { transform: translateX(2px); } }
-    .cup-handle { position: absolute; right: -12px; top: 24px; width: 14px; height: 28px; border: 3px solid #4A90E2; border-left: none; border-radius: 0 10px 10px 0; }
+    .cup-handle { position: absolute; right: -12px; top: 24px; width: 14px; height: 28px; border: 3px solid var(--primary); border-left: none; border-radius: 0 10px 10px 0; }
     .bubble { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.35); animation: bubbleRise 2.4s ease-in infinite; }
     .bubble:nth-child(1) { width: 6px; height: 6px; left: 20%; bottom: 10%; animation-delay: 0s; animation-duration: 2.8s; }
     .bubble:nth-child(2) { width: 4px; height: 4px; left: 50%; bottom: 5%; animation-delay: 0.6s; animation-duration: 3.2s; }
@@ -82,7 +97,7 @@
     .cup-remain { font-size: 0.75rem; margin-top: 1px; }
     .track-wrap { width: 100%; max-width: 300px; margin: 14px auto 0; position: relative; }
     .track-bg { width: 100%; height: 10px; background: #e8edf3; border-radius: 5px; position: relative; overflow: hidden; }
-    .track-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #4A90E2, #5BA3F5); transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); width: 0%; }
+    .track-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--primary), #5BA3F5); transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); width: 0%; }
     .track-runner { position: absolute; top: -8px; font-size: 1.375rem; transition: left 0.6s cubic-bezier(0.34,1.56,0.64,1); left: 0%; z-index: 2; animation: runnerBob 0.3s ease-in-out infinite alternate; transform: scaleX(-1); }
     @keyframes runnerBob { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
     .track-label { display: flex; justify-content: space-between; font-size: 0.6875rem; color: #999; margin-top: 2px; }
@@ -99,30 +114,92 @@
     .accessory.butterfly { animation: butterflyFlutter 1.6s ease-in-out infinite alternate; }
     @keyframes butterflyFlutter { 0% { transform: translate(0, 0) rotate(-5deg); } 100% { transform: translate(8px, -8px) rotate(5deg); } }
     .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-    .btn-water { flex: 1; min-width: 72px; padding: 9px 0; background: #4A90E2; color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+    .btn-water { flex: 1; min-width: 72px; padding: 9px 0; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
     .btn-water:active { opacity: .7; }
-    .btn-water.custom { background: #FF9800; }
-    .btn-water.small { flex: 0 0 auto; padding: 10px 16px; min-width: 60px; }
+    .btn-water.custom { background: var(--warning); }
+    .btn-water.small { flex: 1; min-width: 52px; padding: 10px 4px; font-size: 0.8125rem; }
+    .btn-water.sip { width: 100%; background: #e8f0fe; color: var(--primary); font-size: 0.8125rem; padding: 8px 0; font-weight: 500; border: 1px dashed var(--primary); }
+    .dark-btn-active { background: var(--primary) !important; color: #fff !important; border-color: var(--primary) !important; }
+    .dark-mode .dark-btn-active { background: #5BA3F5 !important; border-color: #5BA3F5 !important; }
+    /* ���� ��ɫģʽ������ʽ ���� */
+    .dark-mode { background: #1a1a2e; color: #e0e0e0; }
+    .dark-mode .appbar { background: #16213e; }
+    .dark-mode .bottom-nav { background: #16213e; border-color: #2a2a4a; }
+    .dark-mode .bottom-nav button { color: #666; }
+    .dark-mode .bottom-nav button.active { color: #7bb3e8; }
+    .dark-mode .card { background: #1e1e38; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .dark-mode .card-title { color: #ccc; }
+    .dark-mode .lb-card { background: #1e1e38; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .dark-mode .lb-item { background: #252545; border-color: #2a2a4a; }
+    .dark-mode .lb-item:nth-child(even) { background: #222240; }
+    .dark-mode .lb-item:hover { background: #2a2a50; }
+    .dark-mode .lb-name { color: #ddd; }
+    .dark-mode .lb-rank { color: #888; }
+    .dark-mode .lb-me { background: #1a2a4a !important; border-color: #3a6aaa; }
+    .dark-mode .lb-empty { color: #888; }
+    .dark-mode .lb-footer { color: #666; }
+    .dark-mode .setting-item { border-color: #2a2a4a; }
+    .dark-mode .setting-label { color: #ddd; }
+    .dark-mode .setting-desc { color: #888; }
+    .dark-mode .setting-arrow { color: #555; }
+    .dark-mode .setting-switch { background: #444; }
+    .dark-mode .setting-switch.on { background: var(--primary); }
+    .dark-mode .modal { background: #1e1e38; }
+    .dark-mode .modal h3 { color: #ddd; }
+    .dark-mode .modal input { background: #2a2a4a; border-color: #3a3a5a; color: #ddd; }
+    .dark-mode .modal-actions .btn-cancel { background: #333; color: #ccc; }
+    .dark-mode .btn-water { background: #3a6aaa; }
+    .dark-mode .btn-water.custom { background: #cc7a00; }
+    .dark-mode .btn-water.sip { background: #1a2a4a; color: #7bb3e8; border-color: #3a6aaa; }
+    .dark-mode .mood-btn { background: #2a2a4a; }
+    .dark-mode .mood-btn:hover { background: #3a3a5a; }
+    .dark-mode .record-item { border-color: #2a2a4a; }
+    .dark-mode .record-icon { background: rgba(74,144,226,.2); }
+    .dark-mode .record-time { color: #888; }
+    .dark-mode .record-del { color: #ef5350; }
+    .dark-mode .chart-box { background: #1e1e38; }
+    .dark-mode .heatmap-day { color: #888; }
+    .dark-mode .heatmap-day.has-data { color: #fff; }
+    .dark-mode .heatmap-month { color: #aaa; }
+    .dark-mode .stat-row .label { color: #999; }
+    .dark-mode .stat-row .value { color: #ddd; }
+    .dark-mode .toast { background: #444; }
+    .dark-mode .plant-name { color: #aaa; }
+    .dark-mode .cup-amount { color: #ddd; }
+    .dark-mode .cup-label { color: #888; }
+    .dark-mode .cup-remain { color: #888; }
+    .dark-mode .track-bg { background: #2a2a4a; }
+    .dark-mode .track-label { color: #888; }
+    .dark-mode .garden .plant-name { color: #aaa; }
+    .dark-mode #heatmapMonthLabel { color: #ccc; }
+    .dark-mode .heatmap-wrap .heatmap-grid .heatmap-day { color: #888; }
+    .dark-mode .lb-tabs button { background: #2a2a4a; border-color: #3a3a5a; color: #999; }
+    .dark-mode .lb-tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .dark-mode .lb-refresh { background: #2a2a4a; color: #7bb3e8; }
+    .dark-mode .chart-toggle button { background: #2a2a4a; border-color: #3a3a5a; color: #999; }
+    .dark-mode .chart-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .dark-mode #darkAutoBtn { border-color: #7bb3e8 !important; color: #7bb3e8 !important; }
+    .dark-mode .heatmap-wrap .heatmap-grid .hm-date { color: #aaa; }
     .mood-row { display: flex; flex-wrap: wrap; gap: 4px; }
     .mood-btn { font-size: 1.25rem; padding: 4px 8px; border: 2px solid transparent; border-radius: 8px; background: #f5f7fa; cursor: pointer; transition: all .2s; line-height: 1; }
     .mood-btn:hover { background: #e8f0fe; transform: scale(1.1); }
-    .mood-btn.active { border-color: #4A90E2; background: #e8f0fe; box-shadow: 0 0 0 2px rgba(74,144,226,.2); transform: scale(1.15); }
+    .mood-btn.active { border-color: var(--primary); background: #e8f0fe; box-shadow: 0 0 0 2px rgba(74,144,226,.2); transform: scale(1.15); }
     .record-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
     .record-item:last-child { border-bottom: none; }
     .record-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(74,144,226,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.125rem; margin-right: 12px; flex-shrink: 0; }
-    .record-mood-add { font-size: 0.875rem; font-weight: 700; color: #4A90E2; cursor: pointer; margin-left: 4px; }
+    .record-mood-add { font-size: 0.875rem; font-weight: 700; color: var(--primary); cursor: pointer; margin-left: 4px; }
     .record-mood-set { font-size: 1rem; margin-right: 4px; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background .2s; }
     .record-mood-set:hover { background: #e8f0fe; }
     .record-mood-set.editing { background: #fff3cd; box-shadow: 0 0 0 2px #ffc107; border-radius: 4px; padding: 2px 4px; }
-    .record-mood-add { font-size: 0.875rem; font-weight: 700; color: #4A90E2; }
+    .record-mood-add { font-size: 0.875rem; font-weight: 700; color: var(--primary); }
     .record-info { flex: 1; }
     .record-amount { font-weight: 600; font-size: 0.9375rem; }
     .record-time { font-size: 0.75rem; color: #999; margin-top: 2px; }
-    .record-del { border: none; background: none; color: #e74c3c; font-size: 1.125rem; cursor: pointer; padding: 4px; }
+    .record-del { border: none; background: none; color: var(--danger); font-size: 1.125rem; cursor: pointer; padding: 4px; }
     .empty-state { text-align: center; padding: 20px; color: #999; font-size: 0.875rem; }
     .chart-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
     .chart-toggle button { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.8125rem; transition: all .2s; }
-    .chart-toggle button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; }
+    .chart-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .chart-box { width: 100%; height: 200px; display: block; }
     .stat-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.875rem; }
     .stat-row .label { color: #666; }
@@ -135,10 +212,9 @@
     .setting-desc { font-size: 0.75rem; color: #999; margin-top: 2px; }
     .setting-arrow { color: #ccc; font-size: 1rem; }
     .setting-switch { position: relative; width: 44px; height: 24px; background: #ddd; border-radius: 12px; cursor: pointer; transition: .3s; flex-shrink: 0; }
-    .setting-switch.on { background: #4A90E2; }
+    .setting-switch.on { background: var(--primary); }
     .setting-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .3s; }
     .setting-switch.on::after { transform: translateX(20px); }
-    .setting-item.disabled { opacity: 0.45; pointer-events: none; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; border-radius: 16px; padding: 24px; width: 300px; max-width: 90%; }
@@ -147,8 +223,8 @@
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
     .modal-actions button { padding: 8px 20px; border-radius: 8px; border: none; font-size: 0.875rem; cursor: pointer; }
     .modal-actions .btn-cancel { background: #e8edf3; color: #333; }
-    .modal-actions .btn-confirm { background: #4A90E2; color: #fff; }
-    .modal-actions .btn-danger { background: #e74c3c; color: #fff; }
+    .modal-actions .btn-confirm { background: var(--primary); color: #fff; }
+    .modal-actions .btn-danger { background: var(--danger); color: #fff; }
     .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 0.8125rem; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; }
     .toast.show { opacity: 1; }
     .heatmap-wrap { margin: 4px 0; }
@@ -156,7 +232,7 @@
     .heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
     .heatmap-day { aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; color: #999; position: relative; overflow: hidden; }
     .heatmap-day.has-data { color: #fff; font-weight: 600; }
-    .heatmap-day.today { outline: 2px solid #4A90E2; outline-offset: 1px; }
+    .heatmap-day.today { outline: 2px solid var(--primary); outline-offset: 1px; }
     .heatmap-day .hm-tip { display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #333; color: #fff; font-size: 0.625rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 5; }
     .heatmap-day:hover .hm-tip { display: block; }
     .heatmap-day .hm-water-wrap { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; }
@@ -167,12 +243,12 @@
     .heatmap-day .hm-wave .w2 { animation: hmWaveSway 2s ease-in-out infinite alternate-reverse; }
     .plant-pop { animation: plantPop .4s ease-out; }
     @keyframes plantPop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
-    @media (max-width: 374px) { .btn-water.small { min-width: 48px; padding: 8px 10px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
+    @media (max-width: 374px) { .btn-water.small { min-width: 44px; padding: 8px 2px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
   </style>
 </head>
 <body>
 <div class="appbar" id="appbar">
-  <div id="appbarTitle">喝杯水吧 💧</div>
+  <div id="appbarTitle">�ȱ�ˮ�� ??</div>
   <div id="motivationMsg" style="font-size:0.75rem;font-weight:400;opacity:.9;margin-top:2px;"></div>
 </div>
 <div class="page active" id="page-home">
@@ -195,20 +271,20 @@
         </div>
         <div class="cup-stats">
           <span class="cup-amount" id="todayAmount">0</span><span class="cup-unit">ml</span>
-          <div class="cup-label" id="todayGoalText">目标：2000 ml</div>
-          <div class="cup-remain" id="todayRemainText">还差 2000 ml</div>
+          <div class="cup-label" id="todayGoalText">Ŀ�꣺2000 ml</div>
+          <div class="cup-remain" id="todayRemainText">���� 2000 ml</div>
         </div>
     </div>
     <div class="track-wrap" style="margin-top:6px;">
-      <div class="track-runner" id="trackRunner">🏃</div>
+      <div class="track-runner" id="trackRunner">??</div>
       <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
       <div class="track-label"><span>0 ml</span><span id="trackGoalLabel">2000 ml</span></div>
     </div>
   </div>
   <div class="card">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleMood()">
-      <span>😊 当下心情 <span class="mood-help" onclick="event.stopPropagation();showMoodHelp()" title="&#x5982;&#x4F55;&#x6DFB;&#x52A0;&#x5FC3;&#x60C5;">&#x2754;</span></span>
-      <span id="moodToggleBtn" style="font-size:0.75rem;color:#4A90E2;">&#x6536;&#x8D77; &#x25B2;</span>
+      <span>?? �������� <span class="mood-help" onclick="event.stopPropagation();showMoodHelp()" title="&#x5982;&#x4F55;&#x6DFB;&#x52A0;&#x5FC3;&#x60C5;">&#x2754;</span></span>
+      <span id="moodToggleBtn" style="font-size:0.75rem;color:var(--primary);">&#x6536;&#x8D77; &#x25B2;</span>
     </div>
     <div id="moodBody">
       <div class="mood-row" id="moodRow">
@@ -245,41 +321,51 @@
       <button class="btn-water small" onclick="addWater(1000)">1000ml</button>
       <button class="btn-water small custom" onclick="showCustomDialog()">&#x81EA;&#x5B9A;&#x4E49;</button>
     </div>
+    <div class="btn-row">
+      <button class="btn-water sip" onclick="addWater(15)">&#x1F445; &#x559d;&#x4E00;&#x5C0F;&#x53E3; (15ml)</button>
+    </div>
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-      <span class="card-title" style="margin-bottom:0;">今日记录</span>
-      <span style="font-size:0.8125rem;color:#999;" id="recordCount">共 0 条</span>
+      <span class="card-title" style="margin-bottom:0;">���ռ�¼</span>
+      <span style="font-size:0.8125rem;color:#999;" id="recordCount">�� 0 ��</span>
     </div>
-    <div id="recordList"><div class="empty-state">今天还没有喝水记录哦～</div></div>
+    <div id="recordList"><div class="empty-state">���컹û�к�ˮ��¼Ŷ��</div></div>
   </div>
 </div>
 <div class="page" id="page-garden">
   <div class="card garden" style="text-align:center;padding:40px 16px;">
-    <div class="plant-emoji" id="plantEmoji" style="font-size:5rem;">🌰</div>
-    <div class="plant-name" id="plantName" style="font-size:1rem;color:#666;margin-top:8px;">种子休眠中</div>
-    <div style="font-size:0.875rem;color:#999;margin-top:20px;">连续达标</div>
-    <div style="font-size:2.5rem;font-weight:700;color:#4A90E2;margin-top:4px;"><span id="streakCount">0</span> 天</div>
+    <div class="plant-emoji" id="plantEmoji" style="font-size:5rem;">??</div>
+    <div class="plant-name" id="plantName" style="font-size:1rem;color:#666;margin-top:8px;">����������</div>
+    <div style="font-size:0.875rem;color:#999;margin-top:20px;">�������</div>
+    <div style="font-size:2.5rem;font-weight:700;color:var(--primary);margin-top:4px;"><span id="streakCount">0</span> ��</div>
   </div>
 </div>
 
 <div class="page" id="page-history">
   <div class="card">
     <div class="chart-toggle" id="chartToggle">
-      <button class="active" onclick="switchChart(true)">本周</button>
-      <button onclick="switchChart(false)">本月</button>
+      <button class="active" onclick="switchChart(true)">����</button>
+      <button onclick="switchChart(false)">����</button>
     </div>
     <canvas class="chart-box" id="chartCanvas" width="400" height="200"></canvas>
   </div>
   <div class="card">
-    <div class="card-title">统计摘要</div>
-    <div class="stat-row"><span class="label">日均喝水量</span><span class="value" id="statAvg">0 ml</span></div>
-    <div class="stat-row"><span class="label">最高日喝水量</span><span class="value" id="statMax">0 ml</span></div>
-    <div class="stat-row"><span class="label">最低日喝水量</span><span class="value" id="statMin">0 ml</span></div>
-    <div class="stat-row"><span class="label">达标天数</span><span class="value" id="statGoal">0 天</span></div>
+    <div class="card-title">ͳ��ժҪ</div>
+    <div class="stat-row"><span class="label">�վ���ˮ��</span><span class="value" id="statAvg">0 ml</span></div>
+    <div class="stat-row"><span class="label">����պ�ˮ��</span><span class="value" id="statMax">0 ml</span></div>
+    <div class="stat-row"><span class="label">����պ�ˮ��</span><span class="value" id="statMin">0 ml</span></div>
+    <div class="stat-row"><span class="label">�������</span><span class="value" id="statGoal">0 ��</span></div>
   </div>
   <div class="card">
-    <div class="card-title">📅 喝水日历</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="card-title">?? ��ˮ����</div>
+      <div style="display:flex;gap:4px;">
+        <button onclick="prevMonth()" style="border:none;background:#f0f4fb;border-radius:6px;padding:2px 10px;font-size:1rem;cursor:pointer;color:var(--primary);">&#x25C0;</button>
+        <span id="heatmapMonthLabel" style="font-size:0.8125rem;font-weight:600;color:#333;min-width:80px;text-align:center;line-height:26px;"></span>
+        <button onclick="nextMonth()" style="border:none;background:#f0f4fb;border-radius:6px;padding:2px 10px;font-size:1rem;cursor:pointer;color:var(--primary);">&#x25B6;</button>
+      </div>
+    </div>
     <div class="heatmap-wrap" id="heatmapWrap"></div>
   </div>
 </div>
@@ -287,119 +373,122 @@
 <div class="page" id="page-settings">
   <div class="card">
     <div class="setting-item" onclick="showGoalDialog()">
-      <span class="setting-icon">🎯</span>
-      <div class="setting-info"><div class="setting-label">每日目标</div><div class="setting-desc" id="settingGoal">2000 ml</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">ÿ��Ŀ��</div><div class="setting-desc" id="settingGoal">2000 ml</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <div class="setting-item" onclick="showCustomAmountDialog()">
-      <span class="setting-icon">💧</span>
-      <div class="setting-info"><div class="setting-label">自定义水量</div><div class="setting-desc" id="settingCustom">250 ml</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">�Զ���ˮ��</div><div class="setting-desc" id="settingCustom">250 ml</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <div class="setting-item">
-      <span class="setting-icon">🔔</span>
-      <div class="setting-info"><div class="setting-label">喝水提醒</div><div class="setting-desc" id="settingRemindDesc">已关闭</div></div>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">��ˮ����</div><div class="setting-desc" id="settingRemindDesc">�ѹر�</div></div>
       <div class="setting-switch" id="remindSwitch" onclick="toggleReminder()"></div>
     </div>
-    <div class="setting-item" onclick="toggleDarkMode()">
-      <span class="setting-icon">🌙</span>
-      <div class="setting-info"><div class="setting-label">深色模式</div><div class="setting-desc" id="settingDarkDesc">跟随系统</div></div>
-      <div class="setting-switch" id="darkSwitch" style="flex-shrink:0;"></div>
+    <div class="setting-item" onclick="showReminderIntervalDialog()">
+      <span class="setting-icon">?</span>
+      <div class="setting-info"><div class="setting-label">��������</div><div class="setting-desc" id="settingIntervalDesc">60 ����</div></div>
+      <span class="setting-arrow">?</span>
+    </div>
+    <div class="setting-item">
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">��ɫģʽ
+        <span id="darkAutoBtn" onclick="setDarkMode('auto')" style="display:inline-block;font-size:0.625rem;color:var(--primary);border:1px solid var(--primary);border-radius:6px;padding:0 6px;margin-left:6px;cursor:pointer;vertical-align:middle;line-height:1.6;">auto</span>
+      </div><div class="setting-desc" id="settingDarkDesc">����ϵͳ</div></div>
+      <div class="setting-switch" id="darkSwitch" onclick="toggleDarkMode()" style="flex-shrink:0;"></div>
+    </div>
     </div>
     <div class="setting-item" onclick="showAvatarDialog()">
-      <span class="setting-icon" id="settingAvatarPreview">🐼</span>
-      <div class="setting-info"><div class="setting-label">我的头像</div><div class="setting-desc" id="settingAvatarName">点击更换</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon" id="settingAvatarPreview">??</span>
+      <div class="setting-info"><div class="setting-label">�ҵ�ͷ��</div><div class="setting-desc" id="settingAvatarName">�������</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <div class="setting-item" onclick="showNicknameDialog()">
-      <span class="setting-icon">✏️</span>
-      <div class="setting-info"><div class="setting-label">我的昵称</div><div class="setting-desc" id="settingNickname">未设置</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">�ҵ��ǳ�</div><div class="setting-desc" id="settingNickname">δ����</div></div>
+      <span class="setting-arrow">?</span>
     </div>
   </div>
   <div class="card">
     <div class="setting-item" onclick="showEffectsGuide()">
-      <span class="setting-icon">✨</span>
-      <div class="setting-info"><div class="setting-label">特效说明</div><div class="setting-desc">查看所有动画效果的触发条件</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">?</span>
+      <div class="setting-info"><div class="setting-label">��Ч˵��</div><div class="setting-desc">�鿴���ж���Ч���Ĵ�������</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <div class="setting-item" onclick="showAboutDialog()">
-      <span class="setting-icon">ℹ️</span>
-      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc">喝杯水吧 v1.2.2</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">����Ӧ��</div><div class="setting-desc">�ȱ�ˮ�� v1.3.0</div></div>
+      <span class="setting-arrow">?</span>
     </div>
   </div>
   <div class="card">
     <div class="setting-item" onclick="showSupabaseDialog()">
-      <span class="setting-icon">🌐</span>
-      <div class="setting-info"><div class="setting-label">在线排行榜</div><div class="setting-desc" id="settingSupabaseDesc">未配置</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">�������а�</div><div class="setting-desc" id="settingSupabaseDesc">δ����</div></div>
+      <span class="setting-arrow">?</span>
     </div>
   </div>
   <div class="card">
     <div class="setting-item" onclick="generatePairingCode()">
-      <span class="setting-icon">🔗</span>
-      <div class="setting-info"><div class="setting-label">连接手表</div><div class="setting-desc">生成配对码，手表输入后同步数据</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">�����ֱ�</div><div class="setting-desc">��������룬�ֱ������ͬ������</div></div>
+      <span class="setting-arrow">?</span>
     </div>
-    <div class="setting-item" id="syncSettingItem" onclick="forceSync()">
-      <span class="setting-icon">🔄</span>
-      <div class="setting-info"><div class="setting-label" id="syncSettingLabel">立即同步</div><div class="setting-desc" id="syncSettingDesc">手动触发一次双向数据同步</div></div>
-      <span class="setting-arrow">›</span>
-    </div>
-    <div class="setting-item" onclick="disconnectWatch()">
-      <span class="setting-icon">⌚</span>
-      <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">断开手表</div><div class="setting-desc" id="watchDisconnectDesc">暂停与手表的数据同步</div></div>
-      <span class="setting-arrow" style="color:#e74c3c;">›</span>
+    <div class="setting-item" onclick="forceSync()">
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">����ͬ��</div><div class="setting-desc">�ֶ�����һ��˫������ͬ��</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <div id="syncDebugWrap" style="display:none;margin:6px 0;">
       <div id="syncDebugSummary" style="font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;line-height:1.6;cursor:pointer;" onclick="toggleSyncDebug()"></div>
       <div id="syncDebugFull" style="display:none;font-size:0.6875rem;color:#555;background:#f0f2f5;border-radius:0 0 8px 8px;padding:8px 10px;line-height:1.5;max-height:300px;overflow-y:auto;word-break:break-all;border-top:1px solid #e0e0e0;"></div>
     </div>
     <div class="setting-item" onclick="disconnectLeaderboard()" style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:12px;">
-      <span class="setting-icon">🔌</span>
-      <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">断开排行榜</div><div class="setting-desc">清除云端连接，恢复为本地模式</div></div>
-      <span class="setting-arrow" style="color:#e74c3c;">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label" style="color:var(--danger);">�Ͽ����а�</div><div class="setting-desc">����ƶ����ӣ��ָ�Ϊ����ģʽ</div></div>
+      <span class="setting-arrow" style="color:var(--danger);">?</span>
     </div>
   </div>
   <div class="card">
     <div class="setting-item" onclick="exportData()">
-      <span class="setting-icon">📤</span>
-      <div class="setting-info"><div class="setting-label">导出数据</div><div class="setting-desc">备份喝水记录到 JSON 文件</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">��������</div><div class="setting-desc">���ݺ�ˮ��¼�� JSON �ļ�</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <div class="setting-item" onclick="document.getElementById('importInput').click()">
-      <span class="setting-icon">📥</span>
-      <div class="setting-info"><div class="setting-label">导入数据</div><div class="setting-desc">从 JSON 文件恢复数据（将覆盖当前数据）</div></div>
-      <span class="setting-arrow">›</span>
+      <span class="setting-icon">??</span>
+      <div class="setting-info"><div class="setting-label">��������</div><div class="setting-desc">�� JSON �ļ��ָ����ݣ������ǵ�ǰ���ݣ�</div></div>
+      <span class="setting-arrow">?</span>
     </div>
     <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
   </div>
-  <button style="width:100%;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:10px;font-size:0.9375rem;font-weight:600;cursor:pointer;" onclick="showResetDialog()">重置所有数据</button>
+  <button style="width:100%;padding:12px;background:var(--danger);color:#fff;border:none;border-radius:10px;font-size:0.9375rem;font-weight:600;cursor:pointer;" onclick="showResetDialog()">������������</button>
 </div>
 
 <div class="page" id="page-leaderboard">
   <div class="lb-card">
-    <div class="lb-header"><h3 id="lbTitle" onclick="onLbTitleTap()" style="cursor:pointer;">🏆 喝水排行榜</h3>
-      <span id="lbAdminBadge" style="display:none;font-size:0.625rem;color:#e74c3c;font-weight:600;margin-right:4px;">管理员</span>
-      <span id="lbExitAdmin" style="display:none;cursor:pointer;font-size:1rem;color:#e74c3c;font-weight:700;padding:0 4px;" onclick="exitAdminMode()" title="退出管理员模式">✕</span>
+    <div class="lb-header"><h3 id="lbTitle" onclick="onLbTitleTap()" style="cursor:pointer;">?? ��ˮ���а�</h3>
+      <span id="lbAdminBadge" style="display:none;font-size:0.625rem;color:var(--danger);font-weight:600;margin-right:4px;">����Ա</span>
+      <span id="lbExitAdmin" style="display:none;cursor:pointer;font-size:1rem;color:var(--danger);font-weight:700;padding:0 4px;" onclick="exitAdminMode()" title="�˳�����Աģʽ">?</span>
       <div style="display:flex;align-items:center;">
         <div class="lb-tabs" id="lbTabs">
-          <button class="active" onclick="switchLB('today')">今日</button>
-          <button onclick="switchLB('week')">本周</button>
-          <button onclick="switchLB('month')">本月</button>
+          <button class="active" onclick="switchLB('today')">����</button>
+          <button onclick="switchLB('week')">����</button>
+          <button onclick="switchLB('month')">����</button>
         </div>
-        <button class="lb-refresh" id="lbRefreshBtn" onclick="manualRefreshLeaderboard()">⟳</button>
+        <button class="lb-refresh" id="lbRefreshBtn" onclick="manualRefreshLeaderboard()">?</button>
       </div>
     </div>
-    <div class="lb-list" id="lbList"><div class="lb-empty">加载中...</div></div>
+    <div class="lb-list" id="lbList"><div class="lb-empty">������...</div></div>
   </div>
-  <div class="lb-footer">⭐ 喝水越多排名越高<br>连续达标天数相同时按总水量排序</div>
+  <div class="lb-footer">? ��ˮԽ������Խ��<br>�������������ͬʱ����ˮ������</div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalContent">
-    <h3 id="modalTitle">标题</h3>
+    <h3 id="modalTitle">����</h3>
     <div id="modalBody"></div>
     <div class="modal-actions" id="modalActions"></div>
   </div>
@@ -408,11 +497,11 @@
 <div class="toast" id="toast"></div>
 
 <nav class="bottom-nav">
-  <button class="active" onclick="switchTab(0)"><span class="icon">🏠</span> 首页</button>
-  <button onclick="switchTab(1)"><span class="icon">🌱</span> 花园</button>
-  <button onclick="switchTab(2)"><span class="icon">🏆</span> 排行</button>
-  <button onclick="switchTab(3)"><span class="icon">📊</span> 历史</button>
-  <button onclick="switchTab(4)"><span class="icon">⚙️</span> 设置</button>
+  <button class="active" onclick="switchTab(0)"><span class="icon">??</span> ��ҳ</button>
+  <button onclick="switchTab(1)"><span class="icon">??</span> ��԰</button>
+  <button onclick="switchTab(2)"><span class="icon">??</span> ����</button>
+  <button onclick="switchTab(3)"><span class="icon">??</span> ��ʷ</button>
+  <button onclick="switchTab(4)"><span class="icon">??</span> ����</button>
 </nav>
 
 <script>
@@ -421,21 +510,25 @@ var SETTINGS_KEY = 'drink_water_settings';
 var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
 var ANON_USER_KEY = 'drink_water_user_id';
 
-/* ── Supabase 集成（排行榜在线版） ── */
-var WATCH_DISCONNECTED_KEY = 'drink_water_watch_disconnected';
+var LS = {
+  STORAGE: STORAGE_KEY,
+  SETTINGS: SETTINGS_KEY,
+  SUPABASE: SUPABASE_CONFIG_KEY,
+  USER_ID: ANON_USER_KEY,
+  DARK_MODE: 'dark_mode',
+  ANIMAL_IDX: 'lb_animal_idx',
+  NICKNAME: 'lb_nickname',
+  WATCH_DISCONNECTED: 'drink_water_watch_disconnected'
+};
 
-function isWatchDisconnected() {
-  return localStorage.getItem(WATCH_DISCONNECTED_KEY) === '1';
+/* DOM 缓存：页面加载时查一次，后续直接用 */
+var _domCache = {};
+function $(id) {
+  if (!_domCache[id]) _domCache[id] = document.getElementById(id);
+  return _domCache[id];
 }
 
-function setWatchDisconnected(val) {
-  if (val) {
-    localStorage.setItem(WATCH_DISCONNECTED_KEY, '1');
-  } else {
-    localStorage.removeItem(WATCH_DISCONNECTED_KEY);
-  }
-}
-
+/* ���� Supabase ���ɣ����а����߰棩 ���� */
 function getAnonUserId() {
   var id = localStorage.getItem(ANON_USER_KEY);
   if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem(ANON_USER_KEY, id); }
@@ -458,11 +551,11 @@ function isSupabaseConfigured() {
   return cfg.url && cfg.key && cfg.url.length > 10 && cfg.key.length > 10;
 }
 
-/* 原生 fetch 封装：向 Supabase REST API 发请求，不依赖任何外部库 */
+/* ԭ�� fetch ��װ���� Supabase REST API �����󣬲������κ��ⲿ�� */
 function sbFetch(path, options) {
   options = options || {};
   var cfg = loadSupabaseConfig();
-  if (!cfg.url || !cfg.key) return Promise.reject(new Error('Supabase 未配置'));
+  if (!cfg.url || !cfg.key) return Promise.reject(new Error('Supabase δ����'));
   var url = cfg.url.replace(/\/+$/, '') + '/rest/v1/' + path.replace(/^\//, '');
   var headers = {
     'apikey': cfg.key,
@@ -484,7 +577,17 @@ function sbFetch(path, options) {
   });
 }
 
-/* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
+/* �������ͣ��� 30 ���ڵĶ�κ�ˮ��һ������ȥ */
+var _debounceTimer = null;
+function debouncedSync() {
+  if (_debounceTimer) clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(function() {
+    _debounceTimer = null;
+    syncTodayToLeaderboard();
+  }, 30000);
+}
+
+/* ����������ͬ���� Supabase ���а�upsert�����Ⱥϲ��ƶ˼�¼������ */
 function syncTodayToLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve();
   var me = getMyAnimal();
@@ -494,9 +597,13 @@ function syncTodayToLeaderboard() {
   var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
     return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
   });
-  syncDebug('📤 推送 ' + todayRecords.length + ' 条, 总量 ' + total + 'ml, 连续 ' + streak + ' 天');
-  syncDebug('📤 推送记录 ID: ' + todayRecords.map(function(r) { return r.id; }).join(', '));
-  if (!navigator.onLine) { syncDebug('❌ 推送失败：网络不可用'); return Promise.resolve(); }
+  /* �ӻ���ȡ����/�����ۼƣ��������ȫ����¼�� */
+  ensureCache();
+  var weekMl = _cacheWeek;
+  var monthMl = _cacheMonth;
+  syncDebug('?? ���� ' + todayRecords.length + ' ��, ���� ' + total + 'ml, ���� ' + streak + ' ��');
+  syncDebug('?? ���ͼ�¼ ID: ' + todayRecords.map(function(r) { return r.id; }).join(', '));
+  if (!navigator.onLine) { syncDebug('? ����ʧ�ܣ����粻����'); return Promise.resolve(); }
   return sbFetch('leaderboard?on_conflict=user_id', {
     method: 'POST',
     headers: { 'Prefer': 'resolution=merge-duplicates' },
@@ -505,6 +612,8 @@ function syncTodayToLeaderboard() {
       nickname: me.name,
       avatar_idx: me.idx,
       today_ml: total,
+      week_ml: weekMl,
+      month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
       banned: false,
@@ -512,26 +621,27 @@ function syncTodayToLeaderboard() {
     })
   }).then(function(resp) {
     if (resp.ok) {
-      syncDebug('✅ 推送成功');
+      syncDebug('? ���ͳɹ�');
     } else {
-      syncDebug('❌ 推送失败: HTTP ' + resp.status);
+      syncDebug('? ����ʧ��: HTTP ' + resp.status);
     }
   }).catch(function(e) {
-    syncDebug('❌ 推送异常: ' + (e.message || e));
+    syncDebug('? �����쳣: ' + (e.message || e));
   });
 }
 
-/* 从 Supabase 获取在线排行榜（最多 20 条） */
+/* �� Supabase ��ȡ�������а���� 20 ���� */
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,streak,banned&order=today_ml.desc&limit=20")
+  /* week_ml / month_ml �������а񡸱��ܡ������¡�����չʾ */
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
     .then(function(resp) {
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
       return resp.json();
     });
 }
 
-/* 按需拉取某个用户的今日详细记录（点击排行榜头像时触发） */
+/* ������ȡĳ���û��Ľ�����ϸ��¼��������а�ͷ��ʱ������ */
 function fetchUserRecords(userId) {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
   return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_records&user_id=eq." + encodeURIComponent(userId) + "&limit=1")
@@ -542,11 +652,11 @@ function fetchUserRecords(userId) {
       });
     });
 }
-/* 拉取当前用户在云端的今日记录（用于设备间同步合并） */
+/* ��ȡ��ǰ�û����ƶ˵Ľ��ռ�¼�������豸��ͬ���ϲ��� */
 function fetchMyTodayRecordsFromCloud() {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
   var uid = getAnonUserId();
-  /* 直接用 fetch 绕过 SDK 可能的缓存问题 */
+  /* ֱ���� fetch �ƹ� SDK ���ܵĻ������� */
   var cfg = loadSupabaseConfig();
   if (!cfg.url || !cfg.key) return Promise.resolve(null);
   var url = cfg.url.replace(/\/$/, '') + '/rest/v1/leaderboard?select=today_records&user_id=eq.' + encodeURIComponent(uid) + '&limit=1';
@@ -558,49 +668,48 @@ function fetchMyTodayRecordsFromCloud() {
     },
     cache: 'no-store'
   }).then(function(resp) {
-    syncDebug('🔍 HTTP ' + resp.status + ' ' + resp.statusText);
-    if (!resp.ok) { syncDebug('🔍 请求失败'); return null; }
+    syncDebug('?? HTTP ' + resp.status + ' ' + resp.statusText);
+    if (!resp.ok) { syncDebug('?? ����ʧ��'); return null; }
     return resp.json();
   }).then(function(data) {
     if (!data || !Array.isArray(data) || data.length === 0) {
-      syncDebug('🔍 返回空，无云端记录');
+      syncDebug('?? ���ؿգ����ƶ˼�¼');
       return null;
     }
     var recs = data[0].today_records || [];
-    syncDebug('🔍 返回 today_records: ' + recs.length + ' 条');
+    syncDebug('?? ���� today_records: ' + recs.length + ' ��');
     if (recs.length > 0) {
       var details = recs.map(function(r) {
         return (r.id || '') + '=' + (r.amount || 0) + 'ml' + (r.mood || '');
       }).join(', ');
-      syncDebug('🔍 记录详情: ' + details);
+      syncDebug('?? ��¼����: ' + details);
     }
     return recs;
   }).catch(function(e) {
-    syncDebug('🔍 网络异常: ' + (e.message || e));
+    syncDebug('?? �����쳣: ' + (e.message || e));
     return null;
   });
 }
 
-/* 将云端今日记录合并到本地 records（按 id 去重） */
+/* ���ƶ˽��ռ�¼�ϲ������� records���� id ȥ�أ� */
 function mergeCloudTodayRecords() {
   if (!isSupabaseConfigured()) return Promise.resolve(0);
-  if (isWatchDisconnected()) { syncDebug('⌚ 手表已断开，跳过拉取'); return Promise.resolve(0); }
   return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
     if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) {
-      syncDebug('📥 云端无数据可合并');
+      syncDebug('?? �ƶ������ݿɺϲ�');
       return 0;
     }
     var localIds = {};
     var todayKey = getDateKey(new Date());
-    /* 建立本地今日记录 id 索引 */
+    /* �������ؽ��ռ�¼ id ���� */
     gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
-    syncDebug('📥 本地已有 ' + Object.keys(localIds).length + ' 条, 云端 ' + cloudRecs.length + ' 条');
-    /* 建立云端 id 索引 */
+    syncDebug('?? �������� ' + Object.keys(localIds).length + ' ��, �ƶ� ' + cloudRecs.length + ' ��');
+    /* �����ƶ� id ���� */
     var cloudIds = {};
     cloudRecs.forEach(function(cr) { if (cr.id) cloudIds[cr.id] = true; });
-    /* 双向同步：
-       1) 本地有但云端没有 → 已删除 → 本地也删掉
-       2) 云端有但本地没有 → 已新增 → 本地加上 */
+    /* ˫��ͬ����
+       1) �����е��ƶ�û�� �� ��ɾ�� �� ����Ҳɾ��
+       2) �ƶ��е�����û�� �� ������ �� ���ؼ��� */
     var removed = 0;
     var removedIds = [];
     gState.records = gState.records.filter(function(r) {
@@ -613,14 +722,14 @@ function mergeCloudTodayRecords() {
       return true;
     });
     if (removed > 0) {
-      syncDebug('📥 云端已删除 ' + removed + ' 条: ' + removedIds.join(', '));
+      syncDebug('?? �ƶ���ɾ�� ' + removed + ' ��: ' + removedIds.join(', '));
     }
     var merged = 0;
     var mergedIds = [];
     cloudRecs.forEach(function(cr) {
       if (!cr.id) return;
       if (!localIds[cr.id]) {
-        /* 云端有但本地没有 → 追加 */
+        /* �ƶ��е�����û�� �� ׷�� */
         gState.records.push({
           id: cr.id,
           amount: cr.amount,
@@ -633,19 +742,19 @@ function mergeCloudTodayRecords() {
       }
     });
     if (merged > 0 || removed > 0) {
-      syncDebug('📥 新增 ' + merged + ' 条, 移除 ' + removed + ' 条');
+      syncDebug('?? ���� ' + merged + ' ��, �Ƴ� ' + removed + ' ��');
       saveRecords(gState.records);
     } else {
-      syncDebug('📥 无变化');
+      syncDebug('?? �ޱ仯');
     }
     return merged;
   });
 }
 
-/* 设备配对：生成 6 位配对码并上传到 Supabase */
+/* �豸��ԣ����� 6 λ����벢�ϴ��� Supabase */
 function generatePairingCode() {
   if (!isSupabaseConfigured()) {
-    showToast('请先在排行榜设置中配置 Supabase');
+    showToast('���������а����������� Supabase');
     return Promise.reject();
   }
   var code = String(Math.floor(100000 + Math.random() * 900000));
@@ -655,23 +764,20 @@ function generatePairingCode() {
     headers: { 'Prefer': 'resolution=merge-duplicates' },
     body: JSON.stringify({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() })
   }).then(function(resp) {
-    if (!resp.ok) { console.warn('Pairing code upload failed:', resp.status); showToast('配对码生成失败'); return; }
-    /* 连接手表成功，清除断开标记 */
-    setWatchDisconnected(false);
-    updateSettingsUI();
-    showModal('📱 连接手表',
+    if (!resp.ok) { console.warn('Pairing code upload failed:', resp.status); showToast('���������ʧ��'); return; }
+    showModal('?? �����ֱ�',
       '<div style="text-align:center;padding:16px 0;">' +
-      '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
-      '<div style="font-size:2.5rem;font-weight:700;letter-spacing:8px;color:#4A90E2;">' + code + '</div>' +
-      '<div style="font-size:0.75rem;color:#999;margin-top:10px;">配对码 5 分钟内有效</div></div>',
-      [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
+      '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">���ֱ���������������</div>' +
+      '<div style="font-size:2.5rem;font-weight:700;letter-spacing:8px;color:var(--primary);">' + code + '</div>' +
+      '<div style="font-size:0.75rem;color:#999;margin-top:10px;">����� 5 ��������Ч</div></div>',
+      [{ text: '�ر�', cls: 'btn-cancel', action: hideModal }]
     );
   });
 }
 
-/* 同步调试日志（在设置页显示，可展开/收起） */
+/* ͬ��������־��������ҳ��ʾ����չ��/���� */
 var _syncLogs = [];
-var _syncLogMaxSummary = 6;  /* 摘要区最多显示行数 */
+var _syncLogMaxSummary = 6;  /* ժҪ�������ʾ���� */
 
 function syncDebug(msg) {
   _syncLogs.push(msg);
@@ -693,18 +799,18 @@ function renderSyncDebug() {
 
   var isExpanded = full.style.display === 'block';
   if (isExpanded) {
-    /* 展开：隐藏摘要区，完整区显示全部 */
+    /* չ��������ժҪ������������ʾȫ�� */
     summary.style.display = 'none';
     var fullHtml = '';
     for (var i = 0; i < _syncLogs.length; i++) {
       fullHtml += '<div>' + _syncLogs[i] + '</div>';
     }
-    fullHtml += '<div style="color:#999;margin-top:4px;cursor:pointer;text-align:center;" onclick="toggleSyncDebug()">▲ 收起</div>';
+    fullHtml += '<div style="color:#999;margin-top:4px;cursor:pointer;text-align:center;" onclick="toggleSyncDebug()">�� ����</div>';
     full.innerHTML = fullHtml;
     full.scrollTop = full.scrollHeight;
     full.style.display = 'block';
   } else {
-    /* 收起：显示摘要前 6 行，隐藏完整区 */
+    /* ������ʾժҪǰ 6 �У����������� */
     summary.style.display = 'block';
     full.style.display = 'none';
     var showLines = Math.min(_syncLogs.length, _syncLogMaxSummary);
@@ -713,7 +819,7 @@ function renderSyncDebug() {
       summaryHtml += '<div>' + _syncLogs[i] + '</div>';
     }
     if (_syncLogs.length > _syncLogMaxSummary) {
-      summaryHtml += '<div style="color:#4A90E2;font-weight:600;margin-top:2px;">▼ 展开全部 (' + _syncLogs.length + ' 条)</div>';
+      summaryHtml += '<div style="color:var(--primary);font-weight:600;margin-top:2px;">�� չ��ȫ�� (' + _syncLogs.length + ' ��)</div>';
     }
     summary.innerHTML = summaryHtml;
   }
@@ -726,64 +832,56 @@ function toggleSyncDebug() {
   renderSyncDebug();
 }
 
-/* 强制双向同步：先推本地数据，再拉云端合并 */
+/* ǿ��˫��ͬ�������Ʊ������ݣ������ƶ˺ϲ� */
 function forceSync() {
-  if (!isSupabaseConfigured()) { showToast('请先配置 Supabase（排行榜设置）'); return; }
+  if (!isSupabaseConfigured()) { showToast('�������� Supabase�����а����ã�'); return; }
   syncDebugClear();
-  syncDebug('🔄 开始同步...');
-  syncDebug('用户 ID: ' + getAnonUserId().substring(0, 8) + '...');
+  syncDebug('?? ��ʼͬ��...');
+  syncDebug('�û� ID: ' + getAnonUserId().substring(0, 8) + '...');
 
   var todayKey = getDateKey(new Date());
   var phoneLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
   var phoneMl = phoneLocal.reduce(function(s, r) { return s + r.amount; }, 0);
-  syncDebug('📱 手机本地: ' + phoneLocal.length + ' 条, ' + phoneMl + 'ml');
+  syncDebug('?? �ֻ�����: ' + phoneLocal.length + ' ��, ' + phoneMl + 'ml');
 
-  if (isWatchDisconnected()) {
-    syncDebug('⌚ 手表已断开，仅推送本地数据（不拉取合并）');
-    return syncTodayToLeaderboard().then(function() {
-      syncDebug('✅ 同步完成（手表断开模式）');
-      showToast('📤 已推送排行榜，手表数据未拉取');
-    });
-  }
-
-  /* 与手表版一致的流程：先推 → 再拉合并 */
-  syncDebug('📤 推送本地数据到云端...');
+  /* ���ֱ��һ�µ����̣����� �� �����ϲ� */
+  syncDebug('?? ���ͱ������ݵ��ƶ�...');
   syncTodayToLeaderboard().then(function() {
-    syncDebug('📥 拉取云端记录合并到本地...');
+    syncDebug('?? ��ȡ�ƶ˼�¼�ϲ�������...');
     return mergeCloudTodayRecords();
   }).then(function(merged) {
     var afterLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
     var afterMl = afterLocal.reduce(function(s, r) { return s + r.amount; }, 0);
-    syncDebug('✅ 同步完成');
-    syncDebug('📱 手机本地现在: ' + afterLocal.length + ' 条, ' + afterMl + 'ml');
+    syncDebug('? ͬ�����');
+    syncDebug('?? �ֻ���������: ' + afterLocal.length + ' ��, ' + afterMl + 'ml');
     if (merged > 0) {
-      syncDebug('⌚ 本次合并了 ' + merged + ' 条手表记录 ✅');
+      syncDebug('? ���κϲ��� ' + merged + ' ���ֱ��¼ ?');
     } else {
-      /* 再查一次云端，判断是不是没有手表数据 */
+      /* �ٲ�һ���ƶˣ��ж��ǲ���û���ֱ����� */
       fetchMyTodayRecordsFromCloud().then(function(recs) {
         var cc = recs && Array.isArray(recs) ? recs.length : 0;
-        syncDebug('☁️ 云端现有 ' + cc + ' 条记录');
+        syncDebug('?? �ƶ����� ' + cc + ' ����¼');
         if (cc === afterLocal.length) {
-          syncDebug('⌚ 未检测到手表的记录 ❌');
+          syncDebug('? δ��⵽�ֱ�ļ�¼ ?');
         } else {
-          syncDebug('⌚ 云端比本地多 ' + (cc - afterLocal.length) + ' 条');
+          syncDebug('? �ƶ˱ȱ��ض� ' + (cc - afterLocal.length) + ' ��');
         }
       });
     }
     refreshUI();
-    showToast('同步完成');
+    showToast('ͬ�����');
   }).catch(function(e) {
-    var msg = e && e.message ? e.message : '未知错误';
+    var msg = e && e.message ? e.message : 'δ֪����';
     if (e && e.toString) msg = e.toString();
-    syncDebug('❌ 同步失败: ' + msg);
-    showToast('同步失败，请检查网络');
+    syncDebug('? ͬ��ʧ��: ' + msg);
+    showToast('ͬ��ʧ�ܣ���������');
   });
 }
 
-/* ── 结束 Supabase 集成 ── */
+/* ���� ���� Supabase ���� ���� */
 
 function getDefaultSettings() {
-  return { dailyGoal: 2000, customAmount: 250, enableReminder: false };
+  return { dailyGoal: 2000, customAmount: 250, enableReminder: false, reminderInterval: 30 };
 }
 
 function loadSettings() {
@@ -863,12 +961,16 @@ var PLANT_STAGES = [
 function calcStreak(records, dailyGoal) {
   var today = new Date();
   var streak = 0;
+  /* 先把记录按日期聚合成总量映射表，避免循环里反复遍历 */
+  var dayMap = {};
+  for (var i = 0; i < records.length; i++) {
+    dayMap[records[i].dateKey] = (dayMap[records[i].dateKey] || 0) + records[i].amount;
+  }
   for (var i = 0; ; i++) {
     var d = new Date(today);
     d.setDate(d.getDate() - i);
     var key = getDateKey(d);
-    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
-    if (dayTotal >= dailyGoal) { streak++; } else { break; }
+    if ((dayMap[key] || 0) >= dailyGoal) { streak++; } else { break; }
   }
   return streak;
 }
@@ -884,12 +986,15 @@ function getPlantStage(streak) {
 function calcExcessStreak(records, dailyGoal) {
   var today = new Date();
   var streak = 0;
+  var dayMap = {};
+  for (var i = 0; i < records.length; i++) {
+    dayMap[records[i].dateKey] = (dayMap[records[i].dateKey] || 0) + records[i].amount;
+  }
   for (var i = 0; ; i++) {
     var d = new Date(today);
     d.setDate(d.getDate() - i);
     var key = getDateKey(d);
-    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
-    if (dayTotal > dailyGoal) { streak++; } else { break; }
+    if ((dayMap[key] || 0) > dailyGoal) { streak++; } else { break; }
   }
   return streak;
 }
@@ -948,12 +1053,14 @@ function renderCupAndTrack(total, goal) {
 }
 
 function fireConfetti() {
+  if (window._confettiBusy) return;
+  window._confettiBusy = true;
   var container = document.createElement('div');
   container.className = 'confetti-container';
   document.body.appendChild(container);
   var colors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#e91e63','#ff6b6b','#ffd93d'];
   var shapes = ['\u25A0','\u25CF','\u25B2','\u2605','\u2666','\u2665'];
-  for (var i = 0; i < 80; i++) {
+  for (var i = 0; i < 40; i++) {
     var piece = document.createElement('div');
     piece.className = 'confetti-piece';
     piece.textContent = shapes[Math.floor(Math.random() * shapes.length)];
@@ -964,7 +1071,10 @@ function fireConfetti() {
     piece.style.animationDelay = Math.random() * 0.8 + 's';
     container.appendChild(piece);
   }
-  setTimeout(function() { if (container.parentNode) { container.parentNode.removeChild(container); } }, 4000);
+  setTimeout(function() {
+    if (container.parentNode) container.parentNode.removeChild(container);
+    window._confettiBusy = false;
+  }, 4000);
 }
 
 function renderRecords(todayRecords) {
@@ -985,24 +1095,24 @@ function renderRecords(todayRecords) {
     var timeStr = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     var div = document.createElement('div');
     div.className = 'record-item';
-    /* 心情显示在水量前面，有心情时可点击编辑 */
+    /* ������ʾ��ˮ��ǰ�棬������ʱ�ɵ���༭ */
     var isEditing = (_editingRecordId === r.id);
     var moodHtml = r.mood
-      ? '<span class="record-mood-set' + (isEditing ? ' editing' : '') + '" onclick="startEditMood(\'' + r.id + '\')" title="点击更换心情">' + r.mood + '</span>'
+      ? '<span class="record-mood-set' + (isEditing ? ' editing' : '') + '" onclick="startEditMood(\'' + r.id + '\')" title="�����������">' + r.mood + '</span>'
       : '';
-    /* 无心情的记录永远显示加号 */
+    /* ������ļ�¼��Զ��ʾ�Ӻ� */
     var addBtn = !r.mood
-      ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="标注心情">➕</span>'
+      ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="��ע����">?</span>'
       : '';
     div.innerHTML = '<div class="record-icon">\u{1F4A7}</div><div class="record-info"><div class="record-amount">' + moodHtml + r.amount + ' ml' + addBtn + '</div><div class="record-time">' + dateStr + ' ' + timeStr + '</div></div><button class="record-del" onclick="deleteRecord(\'' + r.id + '\')">\u2715</button>';
     list.appendChild(div);
   });
-  /* 展开/收起按钮 */
+  /* չ��/����ť */
   if (reversed.length > showMax) {
     var toggleBtn = document.createElement('div');
     toggleBtn.style.cssText = 'text-align:center;padding:8px 0 2px;';
     var toggleLink = document.createElement('span');
-    toggleLink.style.cssText = 'color:#4A90E2;font-size:0.8125rem;cursor:pointer;';
+    toggleLink.style.cssText = 'color:var(--primary);font-size:0.8125rem;cursor:pointer;';
     toggleLink.textContent = isCollapsed ? '\u5c55\u5f00\u5168\u90e8 ' + reversed.length + ' \u6761 \u25BC' : '\u6536\u8d77 \u25B2';
     toggleLink.onclick = function() { _recordsExpanded = !_recordsExpanded; renderRecords(todayRecords); };
     toggleBtn.appendChild(toggleLink);
@@ -1010,7 +1120,7 @@ function renderRecords(todayRecords) {
   }
 }
 
-/* 为已有记录标注/更换心情 */
+/* Ϊ���м�¼��ע/�������� */
 function applyMoodToRecord(id, mood) {
   var m = mood || _selectedMood;
   if (!m) { showToast('\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a\u5fc3\u60c5'); return; }
@@ -1112,12 +1222,45 @@ function triggerOverflow(intensity) {
 }
 var gState = { records: [], settings: getDefaultSettings(), chartWeek: true, chartInstance: null, todayExcessCount: 0, lastExcessDateKey: '' };
 var _selectedMood = '';
+/* ����/����/�����ۼ�ֵ���棨����ÿ�κ�ˮ����ȫ����¼�� */
+var _cacheDateKey = '';
+var _cacheToday = 0, _cacheWeek = 0, _cacheMonth = 0;
+
+function ensureCache() {
+  var today = getDateKey(new Date());
+  if (_cacheDateKey !== today) {
+    _cacheToday = getTodayTotal(gState.records);
+    var wk = getWeekStats(gState.records);
+    _cacheWeek = 0; for (var w in wk) _cacheWeek += wk[w];
+    var mo = getMonthStats(gState.records);
+    _cacheMonth = 0; for (var m in mo) _cacheMonth += mo[m];
+    _cacheDateKey = today;
+  }
+}
+function updateCacheOnAdd(amount) {
+  ensureCache();
+  _cacheToday += amount;
+  /* �ж��Ƿ��ڱ���/�����ڣ����ڵĻ��´� ensureCache ������ */
+  var now = new Date();
+  var day = now.getDay(); /* 0=Sun */
+  var monday = new Date(now); monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  if (getDateKey(now) >= getDateKey(monday)) _cacheWeek += amount;
+  var monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  if (getDateKey(now).substring(0,7) === monthKey) _cacheMonth += amount;
+}
+function updateCacheOnDelete(record) {
+  if (!record || !record.dateKey) return;
+  if (record.dateKey !== getDateKey(new Date())) { _cacheDateKey = ''; return; }
+  _cacheToday -= record.amount;
+  _cacheWeek -= record.amount;
+  _cacheMonth -= record.amount;
+}
 var _editingRecordId = null;
 var _recordsExpanded = false;
 
 function selectMood(el) {
   var mood = el.getAttribute('data-mood');
-  /* 如果正在编辑某条记录的心情，直接应用 */
+  /* ������ڱ༭ĳ����¼�����飬ֱ��Ӧ�� */
   if (_editingRecordId) {
     var editId = _editingRecordId;
     _editingRecordId = null;
@@ -1131,13 +1274,13 @@ function selectMood(el) {
 }
 
 function startEditMood(id) {
-  /* 取消之前可能的高亮 */
+  /* ȡ��֮ǰ���ܵĸ��� */
   _editingRecordId = id;
   showToast('\u70b9\u51fb\u4e00\u4e2a\u65b0\u7684\u5fc3\u60c5\u8868\u60c5\u6765\u66f4\u6362');
   refreshUI();
 }
 
-/* 心情使用说明 */
+/* ����ʹ��˵�� */
 function showMoodHelp() {
   showModal('\u{1F3AD} \u5fc3\u60c5\u4f7f\u7528\u8bf4\u660e',
     '<div style="font-size:0.8125rem;line-height:1.8;">' +
@@ -1154,7 +1297,7 @@ function showMoodHelp() {
   );
 }
 
-/* 心情卡片折叠切换 */
+/* ���鿨Ƭ�۵��л� */
 var _moodExpanded = true;
 function toggleMood() {
   _moodExpanded = !_moodExpanded;
@@ -1171,16 +1314,19 @@ function exportData() {
     records: loadRecords(),
     settings: loadSettings(),
     userId: localStorage.getItem('drink_water_user_id') || '',
-    avatarIdx: localStorage.getItem('lb_animal_idx') || '',
-    nickname: localStorage.getItem('lb_nickname') || '',
-    darkMode: localStorage.getItem('dark_mode') || 'auto',
+    avatarIdx: localStorage.getItem(LS.ANIMAL_IDX) || '',
+    nickname: localStorage.getItem(LS.NICKNAME) || '',
+    darkMode: localStorage.getItem(LS.DARK_MODE) || 'auto',
     supabaseConfig: loadSupabaseConfig()
   };
   var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
-  URL.revokeObjectURL(url);
+  try {
+    var a = document.createElement('a');
+    a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
   showToast('\u6570\u636e\u5df2\u5bfc\u51fa');
 }
 
@@ -1194,12 +1340,12 @@ function importData(event) {
       if (data.records && Array.isArray(data.records)) {
         saveRecords(data.records); gState.records = data.records;
         if (data.settings) { saveSettings(data.settings); gState.settings = data.settings; }
-        /* 恢复身份信息（version >= 2） */
+        /* �ָ������Ϣ��version >= 2�� */
         if (data.version >= 2) {
           if (data.userId) localStorage.setItem('drink_water_user_id', data.userId);
-          if (data.avatarIdx) localStorage.setItem('lb_animal_idx', data.avatarIdx.toString());
-          if (data.nickname) localStorage.setItem('lb_nickname', data.nickname);
-          if (data.darkMode) { localStorage.setItem('dark_mode', data.darkMode); applyDarkMode(data.darkMode); }
+          if (data.avatarIdx) localStorage.setItem(LS.ANIMAL_IDX, data.avatarIdx.toString());
+          if (data.nickname) localStorage.setItem(LS.NICKNAME, data.nickname);
+          if (data.darkMode) { localStorage.setItem(LS.DARK_MODE, data.darkMode); applyDarkMode(data.darkMode); }
           if (data.supabaseConfig && data.supabaseConfig.url && data.supabaseConfig.key) {
             saveSupabaseConfig(data.supabaseConfig);
           }
@@ -1225,24 +1371,63 @@ function showEffectsGuide() {
 
 function showAboutDialog() {
   var uid = localStorage.getItem('drink_water_user_id') || '\u672a\u751f\u6210';
-  showModal('\u5173\u4e8e\u5e94\u7528', '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;"><div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div><b>\u559d\u6c34\u8bb0\u5f55 v1.0</b><br>\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef<br><br><span style="font-size:0.625rem;color:#999;word-break:break-all;">ID: ' + uid + '</span></div>', [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
+  /* ����ʾ������Ϣ��ͬʱ�첽���ظ�����־ */
+  showModal('\u5173\u4e8e\u5e94\u7528',
+    '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;">' +
+    '<div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div>' +
+    '<b>\u559d\u6c34\u8bb0\u5f55</b><br>' +
+    '\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef' +
+    '<br><br>' +
+    '<span style="font-size:0.625rem;color:#999;word-break:break-all;">ID: ' + uid + '</span>' +
+    '<div id="aboutChangelog" style="max-height:320px;overflow-y:auto;border-top:1px solid #e0e0e0;margin-top:12px;padding-top:10px;font-size:0.75rem;line-height:1.7;text-align:left;"><div style="text-align:center;color:#999;padding:10px;">\u52a0\u8f7d\u4e2d...</div></div>' +
+    '</div>',
+    [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
+  );
+  /* �첽���� CHANGELOG.md */
+  fetch('CHANGELOG.md').then(function(resp) {
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return resp.text();
+  }).then(function(md) {
+    var lines = md.split('\n');
+    var html = '<div style="font-weight:600;color:#333;margin-bottom:6px;">\u66f4\u65b0\u65e5\u5fd7</div>';
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.indexOf('## ') === 0) {
+        /* �汾���� */
+        html += '<div style="margin:8px 0 4px;font-weight:600;color:var(--primary);">' + line.replace('## ', '') + '</div>';
+      } else if (line.indexOf('### ') === 0) {
+        /* ������� */
+        html += '<div style="color:#888;font-size:0.6875rem;margin:4px 0 2px;">' + line.replace('### ', '') + '</div>';
+      } else if (line.indexOf('- **') === 0) {
+        /* �Ӵ���Ŀ */
+        html += '<div style="padding-left:10px;">' + line.replace(/^- \*\*(.+?)\*\*(.*)$/, '<b>$1</b>$2') + '</div>';
+      } else if (line.indexOf('- ') === 0) {
+        html += '<div style="padding-left:10px;">' + line + '</div>';
+      }
+    }
+    var el = document.getElementById('aboutChangelog');
+    if (el) el.innerHTML = html;
+  }).catch(function() {
+    var el = document.getElementById('aboutChangelog');
+    if (el) el.innerHTML = '<div style="text-align:center;color:#999;padding:10px;font-size:0.75rem;">\u65e0\u6cd5\u52a0\u8f7d\u66f4\u65b0\u65e5\u5fd7</div>';
+  });
 }
 
-/* ── Supabase 配置对话框 ── */
+/* ���� Supabase ���öԻ��� ���� */
 function showSupabaseDialog() {
   var cfg = loadSupabaseConfig();
   var isConnected = isSupabaseConfigured();
   var statusHtml = isConnected
-    ? '<div style="color:#4CAF50;margin-bottom:12px;font-weight:600;">✅ 已配置</div>'
-    : '<div style="color:#999;margin-bottom:12px;">⚠️ 未配置 — 排行榜将使用本地模拟数据</div>';
+    ? '<div style="color:var(--success);margin-bottom:12px;font-weight:600;">? ������</div>'
+    : '<div style="color:#999;margin-bottom:12px;">?? δ���� �� ���а�ʹ�ñ���ģ������</div>';
   var bodyHtml = statusHtml +
     '<div style="margin-bottom:8px;"><label style="font-size:0.8125rem;color:#666;">Supabase URL</label>' +
     '<input type="text" id="sbUrlInput" value="' + (cfg.url || '') + '" placeholder="https://xxxxx.supabase.co" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.8125rem;margin-top:4px;"></div>' +
     '<div style="margin-bottom:8px;"><label style="font-size:0.8125rem;color:#666;">Anon Key</label>' +
     '<input type="text" id="sbKeyInput" value="' + (cfg.key || '') + '" placeholder="eyJhbGciOiJIUzI1NiIs..." style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.8125rem;margin-top:4px;"></div>' +
     '<div style="margin-top:8px;font-size:0.75rem;color:#999;line-height:1.5;">' +
-    '📖 在 <a href="https://supabase.com" target="_blank" style="color:#4A90E2;">supabase.com</a> 免费注册，创建一个项目后，在 Settings → API 中找到 Project URL 和 anon/public key。</div>';
-  showModal('在线排行榜设置', bodyHtml, [
+    '?? �� <a href="https://supabase.com" target="_blank" style="color:var(--primary);">supabase.com</a> ���ע�ᣬ����һ����Ŀ���� Settings �� API ���ҵ� Project URL �� anon/public key��</div>';
+  showModal('�������а�����', bodyHtml, [
     { text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
     { text: '\u6d4b\u8bd5\u8fde\u63a5', cls: 'btn-confirm', action: function() { testSupabaseConnection(); } }
   ]);
@@ -1252,19 +1437,19 @@ function testSupabaseConnection() {
   var url = document.getElementById('sbUrlInput').value.trim();
   var key = document.getElementById('sbKeyInput').value.trim();
   if (!url || !key) { showToast('\u8bf7\u586b\u5199\u5b8c\u6574\u7684 URL \u548c Key'); return; }
-  /* 临时保存并测试连接 */
+  /* ��ʱ���沢�������� */
   saveSupabaseConfig({ url: url, key: key });
   sbFetch('leaderboard?select=count&limit=1')
     .then(function(resp) {
       if (!resp.ok) {
         showToast('\u8fde\u63a5\u5931\u8d25\uff1aHTTP ' + resp.status);
-        /* 恢复旧配置 */
+        /* �ָ������� */
         saveSupabaseConfig({ url: '', key: '' });
       } else {
         showToast('\u2705 \u8fde\u63a5\u6210\u529f\uff01\u6392\u884c\u699c\u5df2\u542f\u7528\u5728\u7ebf\u6a21\u5f0f');
         hideModal();
         updateSettingsUI();
-        /* 连接成功后清除封禁状态 */
+        /* ���ӳɹ���������״̬ */
         clearBan();
       }
     }).catch(function(e) {
@@ -1272,20 +1457,26 @@ function testSupabaseConnection() {
       saveSupabaseConfig({ url: '', key: '' });
     });
 }
-/* ── 结束 Supabase 配置对话框 ── */
+/* ���� ���� Supabase ���öԻ��� ���� */
 
 function loadAll() {
   gState.settings = loadSettings();
   gState.records = loadRecords();
-  applyDarkMode(localStorage.getItem('dark_mode') || 'auto');
+  applyDarkMode(localStorage.getItem(LS.DARK_MODE) || 'auto');
   var saved = loadSettings();
-  if (saved.enableReminder && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-    if (typeof startReminder === 'function') { startReminder(); }
+  if (saved.enableReminder && typeof Notification !== 'undefined') {
+    if (Notification.permission === 'granted') {
+      if (typeof startReminder === 'function') { startReminder(); }
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then(function(p) {
+        if (p === 'granted' && typeof startReminder === 'function') { startReminder(); }
+      });
+    }
   }
   var todayKey = getDateKey(new Date());
   if (gState.lastExcessDateKey !== todayKey) { gState.todayExcessCount = 0; gState.lastExcessDateKey = todayKey; }
   refreshUI();
-  /* 启动后尝试从云端合并今日记录（每个会话仅一次） */
+  /* ������Դ��ƶ˺ϲ����ռ�¼��ÿ���Ự��һ�Σ� */
   if (!window._cloudMergedToday) {
     window._cloudMergedToday = true;
     mergeCloudTodayRecords().then(function(count) {
@@ -1315,30 +1506,37 @@ function addWater(amount) {
     mood: _selectedMood || ''
   });
   saveRecords(gState.records);
-  syncTodayToLeaderboard(); /* 同步到在线排行榜 */
+  updateCacheOnAdd(amount);
+  debouncedSync(); /* �������ͣ���������� */
   if (wasAlreadyAtGoal) { gState.todayExcessCount++; gState.lastExcessDateKey = todayKey; triggerExcessEffect(gState.todayExcessCount); }
   refreshUI();
-  /* 重置情绪选择 */
+  /* ��������ѡ�� */
   _selectedMood = '';
   document.querySelectorAll('.mood-btn').forEach(function(b) { b.classList.remove('active'); });
   showToast('\u5df2\u8bb0\u5f55 ' + amount + ' ml \u559d\u6c34');
 }
 
 function deleteRecord(id) {
+  /* �ҵ���ɾ�ļ�¼�����ڸ��»��棩 */
+  var deleted = null;
+  for (var _i = 0; _i < gState.records.length; _i++) {
+    if (gState.records[_i].id === id) { deleted = gState.records[_i]; break; }
+  }
   gState.records = gState.records.filter(function(r) { return r.id !== id; });
   saveRecords(gState.records);
+  updateCacheOnDelete(deleted);
   var afterCount = gState.records.length;
-  syncDebug('🗑️ 删除记录，本地剩余 ' + afterCount + ' 条');
+  syncDebug('??? ɾ����¼������ʣ�� ' + afterCount + ' ��');
   syncTodayToLeaderboard().then(function() {
-    syncDebug('✅ 已推送删除后的数据到云端');
-    /* 推完后立刻拉取验证 */
+    syncDebug('? ������ɾ��������ݵ��ƶ�');
+    /* �����������ȡ��֤ */
     fetchMyTodayRecordsFromCloud().then(function(recs) {
       var cloudCount = recs && Array.isArray(recs) ? recs.length : 0;
-      syncDebug('🔍 云端验证: ' + cloudCount + ' 条');
+      syncDebug('?? �ƶ���֤: ' + cloudCount + ' ��');
       if (cloudCount > afterCount) {
-        syncDebug('❌ 云端未同步！仍比本地多 ' + (cloudCount - afterCount) + ' 条');
+        syncDebug('? �ƶ�δͬ�����Աȱ��ض� ' + (cloudCount - afterCount) + ' ��');
       } else {
-        syncDebug('✅ 云端与本地一致');
+        syncDebug('? �ƶ��뱾��һ��');
       }
     });
   });
@@ -1381,7 +1579,7 @@ function createChart() {
   canvas.height = 200;
   var ctx = canvas.getContext('2d');
   var w = canvas.width, h = canvas.height;
-  var pad = { top: 16, bottom: 28, left: 36, right: 10 };
+  var pad = { top: 16, bottom: 24, left: 36, right: 10 };
   var chartW = w - pad.left - pad.right;
   var chartH = h - pad.top - pad.bottom;
 
@@ -1402,7 +1600,7 @@ function createChart() {
   var barTotal = chartW / barCount;
   var barW = Math.max(barTotal - barGap, 2);
 
-  /* Y 轴网格线 + 刻度 */
+  /* Y �������� + �̶� */
   var ySteps = 4;
   ctx.strokeStyle = 'rgba(0,0,0,0.06)';
   ctx.fillStyle = '#999';
@@ -1419,7 +1617,7 @@ function createChart() {
     ctx.fillText(yVal.toString(), pad.left - 4, y);
   }
 
-  /* 画柱子 */
+  /* ������ */
   for (var j = 0; j < barCount; j++) {
     var x = pad.left + j * barTotal + barGap / 2;
     var barH = (values[j] / maxVal) * chartH;
@@ -1440,26 +1638,20 @@ function createChart() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-  }
 
-  /* X 轴标签 — 标签太多时跳着显示，避免重叠 */
-  ctx.fillStyle = '#999';
-  ctx.font = '9px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  var labelStep = barCount > 20 ? Math.ceil(barCount / 10) : 1;
-  if (labelStep > 1 && barCount > 30) labelStep = Math.ceil(barCount / 8);
-  for (var k = 0; k < barCount; k++) {
-    if (k % labelStep !== 0) continue;
-    var lx = pad.left + k * barTotal + barW / 2;
+    /* X ���ǩ */
+    ctx.fillStyle = '#999';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
     ctx.save();
-    ctx.translate(lx, pad.top + chartH + 4);
-    ctx.rotate(labels[k].length > 3 ? -0.5 : 0);
-    ctx.fillText(labels[k], 0, 0);
+    ctx.translate(x + barW / 2, pad.top + chartH + 4);
+    ctx.rotate(labels[j].length > 3 ? -0.5 : 0);
+    ctx.fillText(labels[j], 0, 0);
     ctx.restore();
   }
 
-  /* 目标线 */
+  /* Ŀ���� */
   if (goal > 0) {
     var goalY = pad.top + chartH - (goal / maxVal * chartH);
     ctx.strokeStyle = '#e74c3c';
@@ -1503,54 +1695,32 @@ function updateSettingsUI() {
   document.getElementById('settingCustom').textContent = s.customAmount + ' ml';
   document.getElementById('remindSwitch').className = 'setting-switch' + (s.enableReminder ? ' on' : '');
   document.getElementById('settingRemindDesc').textContent = s.enableReminder ? '\u5df2\u5f00\u542f' : '\u5df2\u5173\u95ed';
-  var darkMode = localStorage.getItem('dark_mode') || 'auto';
-  document.getElementById('darkSwitch').className = 'setting-switch' + (darkMode === 'on' ? ' on' : '');
+  var darkMode = localStorage.getItem(LS.DARK_MODE) || 'auto';
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var isDarkEffective = darkMode === 'on' || (darkMode === 'auto' && prefersDark);
+  document.getElementById('darkSwitch').className = 'setting-switch' + (isDarkEffective ? ' on' : '');
   var darkLabels = { on: '\u5df2\u5f00\u542f', off: '\u5df2\u5173\u95ed', auto: '\u8ddf\u968f\u7cfb\u7edf' };
   document.getElementById('settingDarkDesc').textContent = darkLabels[darkMode] || '\u8ddf\u968f\u7cfb\u7edf';
   var me = getMyAnimal();
   document.getElementById('settingAvatarPreview').textContent = me.emoji;
   document.getElementById('settingAvatarName').textContent = me.name;
-  document.getElementById('settingNickname').textContent = localStorage.getItem('lb_nickname') || '\u672a\u8bbe\u7f6e';
+  document.getElementById('settingNickname').textContent = localStorage.getItem(LS.NICKNAME) || '\u672a\u8bbe\u7f6e';
   var sbDesc = document.getElementById('settingSupabaseDesc');
   if (sbDesc) { sbDesc.textContent = isSupabaseConfigured() ? '\u2705 \u5df2\u8fde\u63a5' : '\u26a0\ufe0f \u672a\u914d\u7f6e'; }
-  /* 同步按钮状态：断开手表时变灰 */
-  var syncItem = document.getElementById('syncSettingItem');
-  var syncLabel = document.getElementById('syncSettingLabel');
-  var syncDesc = document.getElementById('syncSettingDesc');
-  if (syncItem && syncLabel && syncDesc) {
-    var disconnected = isWatchDisconnected();
-    syncItem.className = 'setting-item' + (disconnected ? ' disabled' : '');
-    syncLabel.textContent = disconnected ? '仅推送排行榜' : '立即同步';
-    syncDesc.textContent = disconnected ? '手表已断开，不拉取云端记录' : '手动触发一次双向数据同步';
-  }
-  /* 断开手表按钮状态 */
-  var watchDesc = document.getElementById('watchDisconnectDesc');
-  if (watchDesc) {
-    watchDesc.textContent = disconnected ? '已断开（点击重新启用）' : '停止与手表的数据同步';
+  /* ������������ */
+  var intervalDesc = document.getElementById('settingIntervalDesc');
+  if (intervalDesc) {
+    intervalDesc.textContent = s.enableReminder ? 'ÿ ' + (s.reminderInterval || 60) + ' ����' : '��';
   }
 }
 
-/* 断开手表：停止与本机配对的云端双向同步 */
-function disconnectWatch() {
-  showModal('断开手表',
-    '断开后手机将不再拉取和推送云端数据。<br><br>' +
-    '• 手机本地记录不受影响<br>' +
-    '• 点击「连接手表」可恢复同步',
-    [{ text: '取消', cls: 'btn-cancel', action: hideModal },
-     { text: '断开手表', cls: 'btn-danger', action: function() {
-      setWatchDisconnected(true);
-      hideModal();
-      updateSettingsUI();
-      showToast('已断开手表，同步已暂停');
-    }}]);
-}
-
-/* 断开排行榜：清除 Supabase 配置与用户身份，恢复本地模式 */
+/* �Ͽ����а���� Supabase �������û���ݣ��ָ�����ģʽ */
 function disconnectLeaderboard() {
   showModal('\u786e\u8ba4\u65ad\u5f00', '\u65ad\u5f00\u540e\u5c06\u6e05\u9664 Supabase \u914d\u7f6e\u548c\u7528\u6237\u8eab\u4efd\uff0c\u6570\u636e\u6062\u590d\u4e3a\u672c\u5730\u6a21\u5f0f\u3002\u6b64\u64cd\u4f5c\u4e0d\u4f1a\u5220\u9664\u559d\u6c34\u8bb0\u5f55\u3002',
     [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
      { text: '\u786e\u8ba4\u65ad\u5f00', cls: 'btn-danger', action: function() {
       localStorage.removeItem(SUPABASE_CONFIG_KEY);
+      _sbClient = null;
       localStorage.removeItem(ANON_USER_KEY);
       hideModal();
       updateSettingsUI();
@@ -1595,28 +1765,56 @@ function toggleReminder() {
 
 function startReminder() {
   if (window._reminderInterval) { clearInterval(window._reminderInterval); }
+  var intervalMin = gState.settings.reminderInterval || 60;
   var notify = function() {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification('\u559d\u6c34\u63d0\u9192', { body: '\u8be5\u559d\u6c34\u5566\uff01\u4fdd\u6301\u6c34\u5206\u6444\u5165\uff0c\u8ba9\u8eab\u4f53\u66f4\u5065\u5eb7\uff5e' });
     }
   };
   notify();
-  window._reminderInterval = setInterval(notify, 60 * 60 * 1000);
+  window._reminderInterval = setInterval(notify, intervalMin * 60 * 1000);
 }
 
 function stopReminder() {
   if (window._reminderInterval) { clearInterval(window._reminderInterval); window._reminderInterval = null; }
 }
 
-function toggleDarkMode() {
-  var current = localStorage.getItem('dark_mode') || 'auto';
-  var modes = ['auto', 'on', 'off'];
-  var next = modes[(modes.indexOf(current) + 1) % modes.length];
-  localStorage.setItem('dark_mode', next);
-  applyDarkMode(next);
+/* �����������õ��� */
+function showReminderIntervalDialog() {
+  var curr = gState.settings.reminderInterval || 30;
+  showModal('��������',
+    '<input type="number" id="reminderIntervalInput" value="' + curr + '" placeholder="����" min="1" max="60" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:6px;">��Χ��1-60 ����</div>',
+    [{ text: 'ȡ��', cls: 'btn-cancel', action: hideModal },
+     { text: '����', cls: 'btn-confirm', action: function() {
+      var val = parseInt(document.getElementById('reminderIntervalInput').value);
+      if (!val || val < 1) { showToast('��������Ч������'); return; }
+      if (val > 60) val = 60;
+      gState.settings.reminderInterval = val;
+      saveSettings(gState.settings);
+      updateSettingsUI();
+      if (gState.settings.enableReminder) {
+        stopReminder();
+        startReminder();
+      }
+      hideModal();
+      showToast('���������Ѹ���');
+    }}]
+  );
+  setTimeout(function() { var e = document.getElementById('reminderIntervalInput'); if (e) e.focus(); }, 100);
+}
+
+function setDarkMode(mode) {
+  localStorage.setItem(LS.DARK_MODE, mode);
+  applyDarkMode(mode);
   updateSettingsUI();
   var labels = { on: '\u6df1\u8272\u6a21\u5f0f\u5df2\u5f00\u542f', off: '\u6df1\u8272\u6a21\u5f0f\u5df2\u5173\u95ed', auto: '\u5df2\u5207\u6362\u4e3a\u8ddf\u968f\u7cfb\u7edf' };
-  showToast(labels[next]);
+  showToast(labels[mode]);
+}
+
+function toggleDarkMode() {
+  var current = localStorage.getItem(LS.DARK_MODE) || 'auto';
+  var next = current === 'on' ? 'off' : 'on';
+  setDarkMode(next);
 }
 
 function applyDarkMode(mode) {
@@ -1653,9 +1851,9 @@ var LB_ANIMALS = ['\u{1F43C}','\u{1F98A}','\u{1F430}','\u{1F436}','\u{1F431}','\
 var LB_NAMES = ['\u5c0f\u718a\u732b','\u5c0f\u72d0\u72f8','\u5c0f\u5154\u5b50','\u5c0f\u72d7\u72d7','\u5c0f\u732b\u54aa','\u5c0f\u72ee\u5b50','\u5c0f\u8001\u864e','\u5c0f\u9752\u86d9','\u5c0f\u7334\u5b50','\u5c0f\u72ec\u89d2\u517d','\u5c0f\u4f01\u9e45','\u5c0f\u8003\u62c9','\u5c0f\u7ae0\u9c7c','\u5c0f\u8774\u8776','\u5c0f\u4e4c\u9f9f','\u5c0f\u8725\u8734','\u5c0f\u6d77\u8c5a','\u5c0f\u6d77\u8c79','\u5c0f\u9e66\u9e49','\u5c0f\u677e\u9f20','\u5c0f\u8783\u87f9','\u5c0f\u6cb3\u8c5a','\u5c0f\u9cb8\u9c7c','\u5c0f\u9cc4\u9c7c','\u5c0f\u6050\u9f99','\u5c0f\u7ffc\u9f99','\u5c0f\u9f99','\u5c0f\u706b\u70c8\u9e1f','\u5c0f\u5b54\u96c0','\u5c0f\u5929\u9e45'];
 
 function getMyAnimal() {
-  var id = localStorage.getItem('lb_animal_idx');
-  if (id === null) { id = Math.floor(Math.random() * LB_ANIMALS.length); localStorage.setItem('lb_animal_idx', id.toString()); }
-  var nickname = localStorage.getItem('lb_nickname') || '';
+  var id = localStorage.getItem(LS.ANIMAL_IDX);
+  if (id === null) { id = Math.floor(Math.random() * LB_ANIMALS.length); localStorage.setItem(LS.ANIMAL_IDX, id.toString()); }
+  var nickname = localStorage.getItem(LS.NICKNAME) || '';
   return { emoji: LB_ANIMALS[parseInt(id)], name: nickname || LB_NAMES[parseInt(id)], idx: parseInt(id) };
 }
 
@@ -1663,7 +1861,7 @@ function showAvatarDialog() {
   var me = getMyAnimal();
   var grid = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">';
   for (var i = 0; i < LB_ANIMALS.length; i++) {
-    var sel = (i === me.idx) ? ' style="border:2px solid #4A90E2;background:#e8f0fe;transform:scale(1.05);"' : '';
+    var sel = (i === me.idx) ? ' style="border:2px solid var(--primary);background:#e8f0fe;transform:scale(1.05);"' : '';
     grid += '<div onclick="selectAvatar(' + i + ')"' + sel + ' class="avatar-opt"><div style="font-size:1.75rem;">' + LB_ANIMALS[i] + '</div><div style="font-size:0.625rem;color:#999;margin-top:2px;">' + LB_NAMES[i] + '</div></div>';
   }
   grid += '</div>';
@@ -1673,36 +1871,36 @@ function showAvatarDialog() {
 }
 
 function selectAvatar(idx) {
-  localStorage.setItem('lb_animal_idx', idx.toString());
+  localStorage.setItem(LS.ANIMAL_IDX, idx.toString());
   hideModal(); updateSettingsUI();
   showToast('\u5934\u50cf\u5df2\u66f4\u6362\u4e3a ' + LB_ANIMALS[idx]);
 }
 
 function showNicknameDialog() {
-  var current = localStorage.getItem('lb_nickname') || '';
+  var current = localStorage.getItem(LS.NICKNAME) || '';
   showModal('\u4fee\u6539\u6635\u79f0',
     '<input type="text" id="nicknameInput" value="' + current + '" placeholder="\u8f93\u5165\u4f60\u7684\u6635\u79f0" maxlength="10" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:6px;">\u6700\u591a 10 \u4e2a\u5b57\u7b26</div>',
     [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
      { text: '\u4fdd\u5b58', cls: 'btn-confirm', action: function() {
        var val = document.getElementById('nicknameInput').value.trim();
-       if (val) { localStorage.setItem('lb_nickname', val); hideModal(); updateSettingsUI(); showToast('\u6635\u79f0\u5df2\u8bbe\u4e3a ' + val); }
-       else { localStorage.removeItem('lb_nickname'); hideModal(); updateSettingsUI(); showToast('\u5df2\u6062\u590d\u9ed8\u8ba4\u540d\u79f0'); }
+       if (val) { localStorage.setItem(LS.NICKNAME, val); hideModal(); updateSettingsUI(); showToast('\u6635\u79f0\u5df2\u8bbe\u4e3a ' + val); }
+       else { localStorage.removeItem(LS.NICKNAME); hideModal(); updateSettingsUI(); showToast('\u5df2\u6062\u590d\u9ed8\u8ba4\u540d\u79f0'); }
      }}]);
   setTimeout(function() { var e = document.getElementById('nicknameInput'); if (e) e.focus(); }, 100);
 }
 
 function switchTab(idx) {
   var pages = ['page-home', 'page-garden', 'page-leaderboard', 'page-history', 'page-settings'];
-  var titles = ['喝杯水吧 💧', '我的花园 🌱', '排行榜 🏆', '喝水历史 📊', '设置 ⚙️'];
+  var titles = ['�ȱ�ˮ�� ??', '�ҵĻ�԰ ??', '���а� ??', '��ˮ��ʷ ??', '���� ??'];
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.getElementById(pages[idx]).classList.add('active');
   document.getElementById('appbarTitle').textContent = titles[idx];
-  /* 只在首页显示鼓励语 */
+  /* ֻ����ҳ��ʾ������ */
   var msgEl = document.getElementById('motivationMsg');
   if (msgEl) { msgEl.style.display = (idx === 0) ? '' : 'none'; }
   document.querySelectorAll('.bottom-nav button').forEach(function(b, i) { b.classList.toggle('active', i === idx); });
   if (idx === 2) { renderLeaderboard(); }
-  if (idx === 3) { createChart(); renderHeatmap(); }
+  if (idx === 3) { _heatmapYear = null; _heatmapMonth = null; createChart(); renderHeatmap(); }
   if (idx === 1) { renderGarden(gState.records, gState.settings); }
 }
 
@@ -1710,7 +1908,7 @@ var lbPeriod = 'today';
 var lbInterval = null;
 var _lbTapCount = 0;
 var _lbAdminMode = false;
-var _isBanned = false;  /* 当前用户是否被管理员封禁 */
+var _isBanned = false;  /* ��ǰ�û��Ƿ񱻹���Ա��� */
 
 function getMockUsers(count) {
   var users = [];
@@ -1723,50 +1921,70 @@ function getMockUsers(count) {
 }
 
 function renderLeaderboard() {
-  /* 先检查封禁状态 */
+  /* �ȼ����״̬ */
   checkBanStatus().then(function(banned) {
     _isBanned = banned;
     if (_isBanned) {
-      document.getElementById('lbList').innerHTML = '<div class="lb-empty" style="padding:30px 0;"><div style="font-size:2rem;margin-bottom:8px;">🔌</div>\u5df2\u65ad\u5f00\u6392\u884c\u699c\u8fde\u63a5<br><span style="font-size:0.75rem;color:#999;">\u8bf7\u5230\u8bbe\u7f6e\u4e2d\u70b9\u51fb\u201c\u6d4b\u8bd5\u8fde\u63a5\u201d\u91cd\u65b0\u8fde\u63a5</span></div>';
+      document.getElementById('lbList').innerHTML = '<div class="lb-empty" style="padding:30px 0;"><div style="font-size:2rem;margin-bottom:8px;">??</div>\u5df2\u65ad\u5f00\u6392\u884c\u699c\u8fde\u63a5<br><span style="font-size:0.75rem;color:#999;">\u8bf7\u5230\u8bbe\u7f6e\u4e2d\u70b9\u51fb\u201c\u6d4b\u8bd5\u8fde\u63a5\u201d\u91cd\u65b0\u8fde\u63a5</span></div>';
       document.getElementById('settingSupabaseDesc').textContent = '\u26a0\ufe0f \u5df2\u65ad\u5f00';
       if (lbInterval) { clearInterval(lbInterval); lbInterval = null; }
       return;
     }
-    /* 未封禁，正常渲染 */
+    /* δ�����������Ⱦ */
     renderLeaderboardContent();
   });
 }
 
 function renderLeaderboardContent() {
   var me = getMyAnimal();
-  var myTotal = getTodayTotal(gState.records);
+  /* ���ݵ�ǰѡ���ʾ��Ӧ�������� */
+  ensureCache();
+  var myRecs = lbPeriod === 'today' ? gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; }) : [];
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
-  var myTodayRecs = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; });
-  var myEntry = { emoji: me.emoji, name: me.name, todayMl: myTotal, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+  var myEntry = { emoji: me.emoji, name: me.name, todayMl: _cacheToday, weekMl: _cacheWeek, monthMl: _cacheMonth, streak: myStreak, todayRecords: myRecs, isMe: true };
+
+  /* ���ݵ�ǰѡ��������ĸ��ֶ������չʾ */
+  function getPeriodMl(u) {
+    return lbPeriod === 'today' ? (u.todayMl || 0) : lbPeriod === 'week' ? (u.weekMl || 0) : (u.monthMl || 0);
+  }
 
   function renderList(allUsers) {
-    allUsers.sort(function(a, b) { return b.todayMl - a.todayMl; });
+    allUsers.sort(function(a, b) { return getPeriodMl(b) - getPeriodMl(a); });
     allUsers = allUsers.slice(0, 20);
     var html = '';
     allUsers.forEach(function(u, i) {
       var rank = i + 1;
       var rankText = rank === 1 ? '\u{1F947}' : rank === 2 ? '\u{1F948}' : rank === 3 ? '\u{1F949}' : rank;
       var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
-      /* 不再内嵌 today_records，改为存 user_id，点击时按需拉取 */
       var uid = u.isMe ? '' : (u.user_id || '');
-      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" onclick="event.stopPropagation();deleteUserRanking(\'' + uid + '\',\'' + u.name.replace(/'/g, "\\'") + '\')" title="删除此用户排名">✕</span>' : '';
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" data-deluid="' + uid + '" data-delnick="' + u.name.replace(/"/g, '&quot;') + '" title="ɾ�����û�����">?</span>' : '';
+      var periodMl = getPeriodMl(u);
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + periodMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
+    /* 事件委托：排行榜管理员删除按钮 */
+    document.getElementById('lbList').onclick = function(e) {
+      var target = e.target;
+      while (target && target !== this) {
+        if (target.classList && target.classList.contains('lb-admin-del')) {
+          e.stopPropagation();
+          var delUid = target.getAttribute('data-deluid');
+          var delNick = target.getAttribute('data-delnick');
+          if (delUid) deleteUserRanking(delUid, delNick);
+          return;
+        }
+        target = target.parentNode;
+      }
+    };
   }
 
-  /* 尝试拉在线排行榜，失败则用 mock */
+  /* �������������а�ʧ������ mock */
   var onlinePromise = fetchOnlineLeaderboard();
   if (onlinePromise) {
     onlinePromise.then(function(data) {
       if (data && data.length > 0) {
         var mapped = data
-          .filter(function(u) { return !u.banned; })  /* 过滤掉被封禁的用户 */
+          .filter(function(u) { return !u.banned; })
           .map(function(u) {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
@@ -1775,31 +1993,32 @@ function renderLeaderboardContent() {
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
             todayMl: u.today_ml || 0,
+            weekMl: u.week_ml || 0,  /* �����ۼƣ��ɸ�������ʱ����ϴ� */
+            monthMl: u.month_ml || 0, /* �����ۼ� */
             streak: u.streak || 0,
-            todayRecords: [],  /* 列表页不拉明细 */
+            todayRecords: [],
             isMe: isMe
           };
         });
-        /* 确保当前用户在列表里 */
+        /* ȷ����ǰ�û����б��� */
         var exists = mapped.some(function(u) { return u.isMe; });
         if (!exists) { mapped.push(myEntry); }
         renderList(mapped);
         return;
       }
-      /* 在线数据为空，只显示自己 */
-      renderList(myEntry.todayMl > 0 ? [myEntry] : []);
+      /* ��������Ϊ�գ�ֻ��ʾ�Լ� */
+      renderList(getPeriodMl(myEntry) > 0 ? [myEntry] : []);
     });
   } else {
-    /* 未配置 Supabase，只显示自己 */
-    renderList(myEntry.todayMl > 0 ? [myEntry] : []);
+    /* δ���� Supabase��ֻ��ʾ�Լ� */
+    renderList(getPeriodMl(myEntry) > 0 ? [myEntry] : []);
   }
 
-  if (lbInterval) { clearInterval(lbInterval); }
-  lbInterval = setInterval(function() { if (document.getElementById('page-leaderboard').classList.contains('active')) { renderLeaderboard(); } }, 10000);
+  if (lbInterval) { clearInterval(lbInterval); lbInterval = null; }
 }
 
 var _lastRefreshTime = 0;
-var REFRESH_COOLDOWN = 15000; /* 15 秒冷却 */
+var REFRESH_COOLDOWN = 15000; /* 15 ����ȴ */
 
 function manualRefreshLeaderboard() {
   var now = Date.now();
@@ -1816,7 +2035,7 @@ function manualRefreshLeaderboard() {
     btn.classList.add('spinning');
   }
   _lastRefreshTime = now;
-  /* 先同步当前用户数据，再刷新排行榜 */
+  /* ��ͬ����ǰ�û����ݣ���ˢ�����а� */
   syncTodayToLeaderboard().then(function() {
     renderLeaderboard();
     setTimeout(function() {
@@ -1825,24 +2044,24 @@ function manualRefreshLeaderboard() {
   });
 }
 
-/* 点击排行榜头像查看对方今日喝水记录（按需从云端拉取） */
+/* ������а�ͷ��鿴�Է����պ�ˮ��¼��������ƶ���ȡ�� */
 function showUserRecords(el) {
   var userId = el.getAttribute('data-userid');
   var name = el.getAttribute('data-myname') || '\u533f\u540d';
   var emoji = el.getAttribute('data-myoji') || '\u{1F4A7}';
-  /* 如果是自己，直接用本地数据 */
+  /* ������Լ���ֱ���ñ������� */
   if (!userId) {
     var myId = getAnonUserId();
     userId = myId;
   }
-  /* 先显示加载中 */
+  /* ����ʾ������ */
   showModal(emoji + ' ' + name + ' \u7684\u4eca\u65e5\u8bb0\u5f55',
     '<div style="text-align:center;padding:20px;color:#999;font-size:0.8125rem;">\u52a0\u8f7d\u4e2d...</div>',
     [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
   );
-  /* 从云端拉取 */
+  /* ���ƶ���ȡ */
   if (userId === getAnonUserId()) {
-    /* 自己：用本地数据 */
+    /* �Լ����ñ������� */
     var myRecords = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) {
       return { amount: r.amount, time: r.dateTime, mood: r.mood || '' };
     });
@@ -1860,7 +2079,7 @@ function showUserRecords(el) {
 }
 
 function renderUserRecordsModal(emoji, name, userId, records) {
-  /* 显示简短 user_id 前 8 位 */
+  /* ��ʾ��� user_id ǰ 8 λ */
   var shortId = userId ? userId.substring(0, 8) : '';
   var titleText = emoji + ' ' + name + (shortId ? ' (' + shortId + ')' : '');
   if (!records || records.length === 0) {
@@ -1883,20 +2102,20 @@ function renderUserRecordsModal(emoji, name, userId, records) {
       '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + timeStr + '</div></div></div>';
   });
   html += '</div>';
-  html += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid #e0e0e0;margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:#4A90E2;">' + total + ' ml</span></div>';
+  html += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid #e0e0e0;margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:var(--primary);">' + total + ' ml</span></div>';
   showModal(titleText + ' \u7684\u4eca\u65e5\u8bb0\u5f55', html,
     [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
   );
 }
 
-/* 排行榜标题连点 5 次进入管理员模式 */
+/* ���а�������� 5 �ν������Աģʽ */
 function onLbTitleTap() {
   if (_lbAdminMode) return;
   _lbTapCount++;
   var remaining = 5 - _lbTapCount;
   if (remaining > 0) {
     document.getElementById('lbTitle').textContent = '\u{1F3C6} \u559d\u6c34\u6392\u884c\u699c (' + remaining + ')';
-    /* 0.6 秒后恢复标题 */
+    /* 0.6 ���ָ����� */
     clearTimeout(window._lbTitleTimer);
     window._lbTitleTimer = setTimeout(function() {
       document.getElementById('lbTitle').textContent = '\u{1F3C6} \u559d\u6c34\u6392\u884c\u699c';
@@ -1909,7 +2128,7 @@ function onLbTitleTap() {
     _lbAdminMode = true;
     document.getElementById('lbTitle').textContent = '\u{1F3C6} \u559d\u6c34\u6392\u884c\u699c';
     toggleAdminUI();
-    showToast('🔧 \u7ba1\u7406\u5458\u6a21\u5f0f\u5df2\u5f00\u542f');
+    showToast('?? \u7ba1\u7406\u5458\u6a21\u5f0f\u5df2\u5f00\u542f');
   } else if (_lbTapCount > 5) {
     _lbTapCount = 0;
   }
@@ -1926,19 +2145,19 @@ function toggleAdminUI() {
   var exitBtn = document.getElementById('lbExitAdmin');
   if (badge) badge.style.display = _lbAdminMode ? '' : 'none';
   if (exitBtn) exitBtn.style.display = _lbAdminMode ? '' : 'none';
-  renderLeaderboard();  /* 刷新列表显示删除按钮 */
+  renderLeaderboard();  /* ˢ���б���ʾɾ����ť */
 }
 
 function deleteUserRanking(userId, userName) {
   if (!_lbAdminMode) return;
-  /* 第一步确认 */
-  showModal('🔧 \u5220\u9664\u6392\u540d',
+  /* ��һ��ȷ�� */
+  showModal('?? \u5220\u9664\u6392\u540d',
     '\u786e\u5b9a\u8981\u5220\u9664 <b>' + userName + '</b> \u7684\u6392\u884c\u699c\u6570\u636e\u5417\uff1f',
     [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
      { text: '\u5220\u9664', cls: 'btn-danger', action: function() {
       hideModal();
-      /* 第二步确认 */
-      showModal('🔧 \u518d\u6b21\u786e\u8ba4',
+      /* �ڶ���ȷ�� */
+      showModal('?? \u518d\u6b21\u786e\u8ba4',
         '\u8bf7\u518d\u6b21\u786e\u8ba4\u5220\u9664 <b>' + userName + '</b> \u7684\u6392\u540d\uff1f\u6b64\u64cd\u4f5c\u4e0d\u4f1a\u5f71\u54cd\u5bf9\u65b9\u672c\u5730\u6570\u636e\u3002',
         [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
          { text: '\u786e\u8ba4\u5220\u9664', cls: 'btn-danger', action: function() {
@@ -1951,13 +2170,13 @@ function deleteUserRanking(userId, userName) {
   );
 }
 
-/* 管理员封禁用户：删除排行榜数据并标记 banned=true */
+/* ����Ա����û���ɾ�����а����ݲ���� banned=true */
 function banUserOnCloud(userId, userName) {
-  /* 第 1 步：删除该用户的排名数据 */
+  /* �� 1 ����ɾ�����û����������� */
   sbFetch('leaderboard?user_id=eq.' + encodeURIComponent(userId), { method: 'DELETE' })
     .then(function(resp) {
       if (!resp.ok) { showToast('\u64cd\u4f5c\u5931\u8d25\uff1aHTTP ' + resp.status); return null; }
-      /* 第 2 步：插入一条标记为封禁记录 */
+      /* �� 2 ��������һ�����Ϊ�����¼ */
       return sbFetch('leaderboard?on_conflict=user_id', {
         method: 'POST',
         headers: { 'Prefer': 'resolution=merge-duplicates' },
@@ -1965,7 +2184,7 @@ function banUserOnCloud(userId, userName) {
           user_id: userId,
           banned: true,
           today_ml: 0,
-          nickname: userName + '(已断开)',
+          nickname: userName + '(�ѶϿ�)',
           today_records: [],
           updated_at: new Date().toISOString()
         })
@@ -1977,7 +2196,7 @@ function banUserOnCloud(userId, userName) {
     });
 }
 
-/* 检测当前用户是否被封禁 */
+/* ��⵱ǰ�û��Ƿ񱻷�� */
 function checkBanStatus() {
   if (!isSupabaseConfigured()) return Promise.resolve(false);
   return sbFetch('leaderboard?select=banned&user_id=eq.' + encodeURIComponent(getAnonUserId()) + '&limit=1')
@@ -1989,7 +2208,7 @@ function checkBanStatus() {
     }).catch(function() { return false; });
 }
 
-/* 清除封禁（"测试连接"成功后调用） */
+/* ��������"��������"�ɹ�����ã� */
 function clearBan() {
   if (!isSupabaseConfigured()) return Promise.resolve();
   return sbFetch('leaderboard?on_conflict=user_id', {
@@ -2010,14 +2229,19 @@ function switchLB(period) {
   document.querySelectorAll('#lbTabs button').forEach(function(b) { b.classList.toggle('active', b.textContent.trim() === (period === 'today' ? '\u4eca\u65e5' : period === 'week' ? '\u672c\u5468' : '\u672c\u6708')); });
   renderLeaderboard();
 }
+var _heatmapYear = null;
+var _heatmapMonth = null;
+
 function renderHeatmap() {
   var wrap = document.getElementById('heatmapWrap');
   if (!wrap) return;
   var records = gState.records;
   var goal = gState.settings.dailyGoal;
   var now = new Date();
-  var year = now.getFullYear();
-  var month = now.getMonth();
+  if (_heatmapYear === null) _heatmapYear = now.getFullYear();
+  if (_heatmapMonth === null) _heatmapMonth = now.getMonth();
+  var year = _heatmapYear;
+  var month = _heatmapMonth;
   var days = new Date(year, month + 1, 0).getDate();
   var firstDay = new Date(year, month, 1).getDay();
   var totalByDay = {};
@@ -2034,7 +2258,8 @@ function renderHeatmap() {
     var isToday = (key === todayKey);
     var hasWater = (amt > 0);
     var cls = 'heatmap-day' + (hasWater ? ' has-data' : '') + (isToday ? ' today' : '');
-    html += '<div class="' + cls + '" style="position:relative;">';
+    var onclick = "showDayRecords('" + key + "')";
+    html += '<div class="' + cls + '" style="position:relative;cursor:pointer;" onclick="' + onclick + '">';
     if (hasWater) {
       html += '<div class="hm-water-wrap"><div class="hm-water-fill" style="height:' + fillPct + '%">';
       html += '<div class="hm-wave"><svg viewBox="0 0 30 6" preserveAspectRatio="none">';
@@ -2044,13 +2269,54 @@ function renderHeatmap() {
     html += '<div class="hm-date">' + d + (hasWater ? '<div class="hm-tip">' + key + ' ' + amt + 'ml</div>' : '') + '</div></div>';
   }
   html += '</div>';
+  /* �����·ݱ�ǩ */
+  var labelEl = document.getElementById('heatmapMonthLabel');
+  if (labelEl) labelEl.textContent = year + '.' + String(month+1).padStart(2,'0');
   wrap.innerHTML = html;
+}
+
+/* �������� */
+function prevMonth() {
+  _heatmapMonth--;
+  if (_heatmapMonth < 0) { _heatmapMonth = 11; _heatmapYear--; }
+  renderHeatmap();
+}
+function nextMonth() {
+  _heatmapMonth++;
+  if (_heatmapMonth > 11) { _heatmapMonth = 0; _heatmapYear++; }
+  renderHeatmap();
+}
+
+/* ����������ڣ���ʾ����ĺ�ˮ��¼ */
+function showDayRecords(dateKey) {
+  var dayRecords = gState.records.filter(function(r) { return r.dateKey === dateKey; });
+  var total = 0;
+  var listHtml = '';
+  for (var i = 0; i < dayRecords.length; i++) {
+    var r = dayRecords[i];
+    total += r.amount;
+    var t = new Date(r.dateTime);
+    var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    var mood = r.mood || '';
+    listHtml += '<div style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;">' +
+      '<span style="font-size:1.125rem;margin-right:8px;">\u{1F4A7}</span>' +
+      '<div style="flex:1;"><span style="font-weight:600;">' + r.amount + ' ml</span>' +
+      (mood ? ' <span style="font-size:0.875rem;">' + mood + '</span>' : '') +
+      '<div style="font-size:0.6875rem;color:#999;margin-top:1px;">' + timeStr + '</div></div></div>';
+  }
+  var content = '<div style="max-height:50vh;overflow-y:auto;">' + (listHtml || '<div style="text-align:center;padding:12px;color:#999;font-size:0.8125rem;">\u8fd9\u5929\u6ca1\u6709\u559d\u6c34\u8bb0\u5f55</div>') + '</div>';
+  if (total > 0) {
+    content += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid #e0e0e0;margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:var(--primary);">' + total + ' ml</span></div>';
+  }
+  var parts = dateKey.split('-');
+  var title = parts[0] + '.' + parts[1] + '.' + parts[2];
+  showModal('\uD83D\uDCC5 ' + title, content, [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
 }
 
 loadAll();
 </script>
 <script>
-if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem('dark_mode') || 'auto'); }); }
+if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem(LS.DARK_MODE) || 'auto'); }); }
 </script>
 </body>
 </html>

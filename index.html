@@ -1349,7 +1349,7 @@ function createChart() {
   canvas.height = 200;
   var ctx = canvas.getContext('2d');
   var w = canvas.width, h = canvas.height;
-  var pad = { top: 16, bottom: 24, left: 36, right: 10 };
+  var pad = { top: 16, bottom: 28, left: 36, right: 10 };
   var chartW = w - pad.left - pad.right;
   var chartH = h - pad.top - pad.bottom;
 
@@ -1408,16 +1408,22 @@ function createChart() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+  }
 
-    /* X 轴标签 */
-    ctx.fillStyle = '#999';
-    ctx.font = '9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
+  /* X 轴标签 — 标签太多时跳着显示，避免重叠 */
+  ctx.fillStyle = '#999';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  var labelStep = barCount > 20 ? Math.ceil(barCount / 10) : 1;
+  if (labelStep > 1 && barCount > 30) labelStep = Math.ceil(barCount / 8);
+  for (var k = 0; k < barCount; k++) {
+    if (k % labelStep !== 0) continue;
+    var lx = pad.left + k * barTotal + barW / 2;
     ctx.save();
-    ctx.translate(x + barW / 2, pad.top + chartH + 4);
-    ctx.rotate(labels[j].length > 3 ? -0.5 : 0);
-    ctx.fillText(labels[j], 0, 0);
+    ctx.translate(lx, pad.top + chartH + 4);
+    ctx.rotate(labels[k].length > 3 ? -0.5 : 0);
+    ctx.fillText(labels[k], 0, 0);
     ctx.restore();
   }
 

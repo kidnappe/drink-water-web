@@ -138,6 +138,7 @@
     .setting-switch.on { background: #4A90E2; }
     .setting-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .3s; }
     .setting-switch.on::after { transform: translateX(20px); }
+    .setting-item.disabled { opacity: 0.45; pointer-events: none; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; border-radius: 16px; padding: 24px; width: 300px; max-width: 90%; }
@@ -341,10 +342,15 @@
       <div class="setting-info"><div class="setting-label">连接手表</div><div class="setting-desc">生成配对码，手表输入后同步数据</div></div>
       <span class="setting-arrow">›</span>
     </div>
-    <div class="setting-item" onclick="forceSync()">
+    <div class="setting-item" id="syncSettingItem" onclick="forceSync()">
       <span class="setting-icon">🔄</span>
-      <div class="setting-info"><div class="setting-label">立即同步</div><div class="setting-desc">手动触发一次双向数据同步</div></div>
+      <div class="setting-info"><div class="setting-label" id="syncSettingLabel">立即同步</div><div class="setting-desc" id="syncSettingDesc">手动触发一次双向数据同步</div></div>
       <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="disconnectWatch()">
+      <span class="setting-icon">⌚</span>
+      <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">断开手表</div><div class="setting-desc" id="watchDisconnectDesc">暂停与手表的数据同步</div></div>
+      <span class="setting-arrow" style="color:#e74c3c;">›</span>
     </div>
     <div id="syncDebugWrap" style="display:none;margin:6px 0;">
       <div id="syncDebugSummary" style="font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;line-height:1.6;cursor:pointer;" onclick="toggleSyncDebug()"></div>
@@ -416,6 +422,20 @@ var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
 var ANON_USER_KEY = 'drink_water_user_id';
 
 /* ── Supabase 集成（排行榜在线版） ── */
+var WATCH_DISCONNECTED_KEY = 'drink_water_watch_disconnected';
+
+function isWatchDisconnected() {
+  return localStorage.getItem(WATCH_DISCONNECTED_KEY) === '1';
+}
+
+function setWatchDisconnected(val) {
+  if (val) {
+    localStorage.setItem(WATCH_DISCONNECTED_KEY, '1');
+  } else {
+    localStorage.removeItem(WATCH_DISCONNECTED_KEY);
+  }
+}
+
 function getAnonUserId() {
   var id = localStorage.getItem(ANON_USER_KEY);
   if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem(ANON_USER_KEY, id); }
@@ -564,6 +584,7 @@ function fetchMyTodayRecordsFromCloud() {
 /* 将云端今日记录合并到本地 records（按 id 去重） */
 function mergeCloudTodayRecords() {
   if (!isSupabaseConfigured()) return Promise.resolve(0);
+  if (isWatchDisconnected()) { syncDebug('⌚ 手表已断开，跳过拉取'); return Promise.resolve(0); }
   return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
     if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) {
       syncDebug('📥 云端无数据可合并');
@@ -635,6 +656,9 @@ function generatePairingCode() {
     body: JSON.stringify({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() })
   }).then(function(resp) {
     if (!resp.ok) { console.warn('Pairing code upload failed:', resp.status); showToast('配对码生成失败'); return; }
+    /* 连接手表成功，清除断开标记 */
+    setWatchDisconnected(false);
+    updateSettingsUI();
     showModal('📱 连接手表',
       '<div style="text-align:center;padding:16px 0;">' +
       '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
@@ -713,6 +737,14 @@ function forceSync() {
   var phoneLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
   var phoneMl = phoneLocal.reduce(function(s, r) { return s + r.amount; }, 0);
   syncDebug('📱 手机本地: ' + phoneLocal.length + ' 条, ' + phoneMl + 'ml');
+
+  if (isWatchDisconnected()) {
+    syncDebug('⌚ 手表已断开，仅推送本地数据（不拉取合并）');
+    return syncTodayToLeaderboard().then(function() {
+      syncDebug('✅ 同步完成（手表断开模式）');
+      showToast('📤 已推送排行榜，手表数据未拉取');
+    });
+  }
 
   /* 与手表版一致的流程：先推 → 再拉合并 */
   syncDebug('📤 推送本地数据到云端...');
@@ -1481,6 +1513,36 @@ function updateSettingsUI() {
   document.getElementById('settingNickname').textContent = localStorage.getItem('lb_nickname') || '\u672a\u8bbe\u7f6e';
   var sbDesc = document.getElementById('settingSupabaseDesc');
   if (sbDesc) { sbDesc.textContent = isSupabaseConfigured() ? '\u2705 \u5df2\u8fde\u63a5' : '\u26a0\ufe0f \u672a\u914d\u7f6e'; }
+  /* 同步按钮状态：断开手表时变灰 */
+  var syncItem = document.getElementById('syncSettingItem');
+  var syncLabel = document.getElementById('syncSettingLabel');
+  var syncDesc = document.getElementById('syncSettingDesc');
+  if (syncItem && syncLabel && syncDesc) {
+    var disconnected = isWatchDisconnected();
+    syncItem.className = 'setting-item' + (disconnected ? ' disabled' : '');
+    syncLabel.textContent = disconnected ? '仅推送排行榜' : '立即同步';
+    syncDesc.textContent = disconnected ? '手表已断开，不拉取云端记录' : '手动触发一次双向数据同步';
+  }
+  /* 断开手表按钮状态 */
+  var watchDesc = document.getElementById('watchDisconnectDesc');
+  if (watchDesc) {
+    watchDesc.textContent = disconnected ? '已断开（点击重新启用）' : '停止与手表的数据同步';
+  }
+}
+
+/* 断开手表：停止与本机配对的云端双向同步 */
+function disconnectWatch() {
+  showModal('断开手表',
+    '断开后手机将不再拉取和推送云端数据。<br><br>' +
+    '• 手机本地记录不受影响<br>' +
+    '• 点击「连接手表」可恢复同步',
+    [{ text: '取消', cls: 'btn-cancel', action: hideModal },
+     { text: '断开手表', cls: 'btn-danger', action: function() {
+      setWatchDisconnected(true);
+      hideModal();
+      updateSettingsUI();
+      showToast('已断开手表，同步已暂停');
+    }}]);
 }
 
 /* 断开排行榜：清除 Supabase 配置与用户身份，恢复本地模式 */
@@ -1489,7 +1551,6 @@ function disconnectLeaderboard() {
     [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
      { text: '\u786e\u8ba4\u65ad\u5f00', cls: 'btn-danger', action: function() {
       localStorage.removeItem(SUPABASE_CONFIG_KEY);
-      _sbClient = null;
       localStorage.removeItem(ANON_USER_KEY);
       hideModal();
       updateSettingsUI();

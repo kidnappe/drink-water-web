@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/option-cup.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="喝水记录">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -155,7 +156,8 @@
     .btn-water { flex: 1; min-width: 72px; padding: 9px 0; background: #4A90E2; color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
     .btn-water:active { opacity: .7; }
     .btn-water.custom { background: #FF9800; }
-    .btn-water.small { flex: 0 0 auto; padding: 10px 16px; min-width: 60px; }
+    .btn-water.small { flex: 1; min-width: 52px; padding: 10px 4px; font-size: 0.8125rem; }
+    .btn-water.sip { width: 100%; background: #e8f0fe; color: var(--primary); font-size: 0.8125rem; padding: 8px 0; font-weight: 500; border: 1px dashed var(--primary); }
     .mood-row { display: flex; flex-wrap: wrap; gap: 4px; }
     .mood-btn { font-size: 1.25rem; padding: 4px 8px; border: 2px solid transparent; border-radius: 8px; background: #f5f7fa; cursor: pointer; transition: all .2s; line-height: 1; }
     .mood-btn:hover { background: #e8f0fe; transform: scale(1.1); }
@@ -219,7 +221,7 @@
     .heatmap-day .hm-wave .w2 { animation: hmWaveSway 2s ease-in-out infinite alternate-reverse; }
     .plant-pop { animation: plantPop .4s ease-out; }
     @keyframes plantPop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
-    @media (max-width: 374px) { .btn-water.small { min-width: 48px; padding: 8px 10px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
+    @media (max-width: 374px) { .btn-water.small { min-width: 44px; padding: 8px 2px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
   </style>
 </head>
 <body>
@@ -297,6 +299,9 @@
       <button class="btn-water small" onclick="addWater(1000)">1000ml</button>
       <button class="btn-water small custom" onclick="showCustomDialog()">&#x81EA;&#x5B9A;&#x4E49;</button>
     </div>
+    <div class="btn-row">
+      <button class="btn-water sip" onclick="addWater(15)">&#x1F445; &#x559d;&#x4E00;&#x5C0F;&#x53E3; (15ml)</button>
+    </div>
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
@@ -332,6 +337,11 @@
   </div>
   <div class="card">
     <div class="card-title">📅 喝水日历</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <button onclick="prevMonth()" style="border:none;background:var(--bg);border-radius:6px;padding:2px 10px;font-size:1rem;cursor:pointer;color:var(--primary);">◀</button>
+      <span id="heatmapMonthLabel" style="font-size:0.8125rem;font-weight:600;color:var(--text);flex:1;text-align:center;"></span>
+      <button onclick="nextMonth()" style="border:none;background:var(--bg);border-radius:6px;padding:2px 10px;font-size:1rem;cursor:pointer;color:var(--primary);">▶</button>
+    </div>
     <div class="heatmap-wrap" id="heatmapWrap"></div>
   </div>
 </div>
@@ -524,6 +534,16 @@ function sbFetch(path, options) {
   });
 }
 
+/* 攒批推送：攒 30 秒内的多次喝水，一次推上去 */
+var _debounceTimer = null;
+function debouncedSync() {
+  if (_debounceTimer) clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(function() {
+    _debounceTimer = null;
+    syncTodayToLeaderboard();
+  }, 30000);
+}
+
 /* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
 function syncTodayToLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve();
@@ -535,6 +555,10 @@ function syncTodayToLeaderboard() {
     return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
   });
   syncDebug('📤 推送 ' + todayRecords.length + ' 条, 总量 ' + total + 'ml, 连续 ' + streak + ' 天');
+  /* 从缓存取本周/本月累计 */
+  ensureCache();
+  var weekMl = _cacheWeek;
+  var monthMl = _cacheMonth;
   syncDebug('📤 推送记录 ID: ' + todayRecords.map(function(r) { return r.id; }).join(', '));
   if (!navigator.onLine) { syncDebug('❌ 推送失败：网络不可用'); return Promise.resolve(); }
   return sbFetch('leaderboard?on_conflict=user_id', {
@@ -545,6 +569,8 @@ function syncTodayToLeaderboard() {
       nickname: me.name,
       avatar_idx: me.idx,
       today_ml: total,
+      week_ml: weekMl,
+      month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
       banned: false,
@@ -564,7 +590,7 @@ function syncTodayToLeaderboard() {
 /* 从 Supabase 获取在线排行榜（最多 20 条） */
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,streak,banned&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
     .then(function(resp) {
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
       return resp.json();
@@ -891,12 +917,16 @@ var PLANT_STAGES = [
 function calcStreak(records, dailyGoal) {
   var today = new Date();
   var streak = 0;
+  /* 先把记录按日期聚合成总量映射表，避免循环里反复遍历 */
+  var dayMap = {};
+  for (var i = 0; i < records.length; i++) {
+    dayMap[records[i].dateKey] = (dayMap[records[i].dateKey] || 0) + records[i].amount;
+  }
   for (var i = 0; ; i++) {
     var d = new Date(today);
     d.setDate(d.getDate() - i);
     var key = getDateKey(d);
-    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
-    if (dayTotal >= dailyGoal) { streak++; } else { break; }
+    if ((dayMap[key] || 0) >= dailyGoal) { streak++; } else { break; }
   }
   return streak;
 }
@@ -976,12 +1006,14 @@ function renderCupAndTrack(total, goal) {
 }
 
 function fireConfetti() {
+  if (window._confettiBusy) return;
+  window._confettiBusy = true;
   var container = document.createElement('div');
   container.className = 'confetti-container';
   document.body.appendChild(container);
   var colors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#e91e63','#ff6b6b','#ffd93d'];
   var shapes = ['\u25A0','\u25CF','\u25B2','\u2605','\u2666','\u2665'];
-  for (var i = 0; i < 80; i++) {
+  for (var i = 0; i < 40; i++) {
     var piece = document.createElement('div');
     piece.className = 'confetti-piece';
     piece.textContent = shapes[Math.floor(Math.random() * shapes.length)];
@@ -992,7 +1024,10 @@ function fireConfetti() {
     piece.style.animationDelay = Math.random() * 0.8 + 's';
     container.appendChild(piece);
   }
-  setTimeout(function() { if (container.parentNode) { container.parentNode.removeChild(container); } }, 4000);
+  setTimeout(function() {
+    if (container.parentNode) container.parentNode.removeChild(container);
+    window._confettiBusy = false;
+  }, 4000);
 }
 
 function renderRecords(todayRecords) {
@@ -1140,6 +1175,37 @@ function triggerOverflow(intensity) {
 }
 var gState = { records: [], settings: getDefaultSettings(), chartWeek: true, chartInstance: null, todayExcessCount: 0, lastExcessDateKey: '' };
 var _selectedMood = '';
+/* 今日/本周/本月累计值缓存 */
+var _cacheDateKey = '';
+var _cacheToday = 0, _cacheWeek = 0, _cacheMonth = 0;
+function ensureCache() {
+  var today = getDateKey(new Date());
+  if (_cacheDateKey !== today) {
+    _cacheToday = getTodayTotal(gState.records);
+    var wk = getWeekStats(gState.records);
+    _cacheWeek = 0; for (var w in wk) _cacheWeek += wk[w];
+    var mo = getMonthStats(gState.records);
+    _cacheMonth = 0; for (var m in mo) _cacheMonth += mo[m];
+    _cacheDateKey = today;
+  }
+}
+function updateCacheOnAdd(amount) {
+  ensureCache();
+  _cacheToday += amount;
+  var now = new Date();
+  var day = now.getDay();
+  var monday = new Date(now); monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  if (getDateKey(now) >= getDateKey(monday)) _cacheWeek += amount;
+  var monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  if (getDateKey(now).substring(0,7) === monthKey) _cacheMonth += amount;
+}
+function updateCacheOnDelete(record) {
+  if (!record || !record.dateKey) return;
+  if (record.dateKey !== getDateKey(new Date())) { _cacheDateKey = ''; return; }
+  _cacheToday -= record.amount;
+  _cacheWeek -= record.amount;
+  _cacheMonth -= record.amount;
+}
 var _editingRecordId = null;
 var _recordsExpanded = false;
 
@@ -1206,9 +1272,12 @@ function exportData() {
   };
   var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
-  URL.revokeObjectURL(url);
+  try {
+    var a = document.createElement('a');
+    a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
   showToast('\u6570\u636e\u5df2\u5bfc\u51fa');
 }
 
@@ -1402,7 +1471,7 @@ function addWater(amount) {
     mood: _selectedMood || ''
   });
   saveRecords(gState.records);
-  syncTodayToLeaderboard(); /* 同步到在线排行榜 */
+  debouncedSync(); /* 同步到在线排行榜 */
   if (wasAlreadyAtGoal) { gState.todayExcessCount++; gState.lastExcessDateKey = todayKey; triggerExcessEffect(gState.todayExcessCount); }
   refreshUI();
   /* 重置情绪选择 */
@@ -1412,8 +1481,13 @@ function addWater(amount) {
 }
 
 function deleteRecord(id) {
+  var deleted = null;
+  for (var _i = 0; _i < gState.records.length; _i++) {
+    if (gState.records[_i].id === id) { deleted = gState.records[_i]; break; }
+  }
   gState.records = gState.records.filter(function(r) { return r.id !== id; });
   saveRecords(gState.records);
+  updateCacheOnDelete(deleted);
   var afterCount = gState.records.length;
   syncDebug('🗑️ 删除记录，本地剩余 ' + afterCount + ' 条');
   syncTodayToLeaderboard().then(function() {
@@ -1784,7 +1858,7 @@ function switchTab(idx) {
   if (msgEl) { msgEl.style.display = (idx === 0) ? '' : 'none'; }
   document.querySelectorAll('.bottom-nav button').forEach(function(b, i) { b.classList.toggle('active', i === idx); });
   if (idx === 2) { renderLeaderboard(); }
-  if (idx === 3) { createChart(); renderHeatmap(); }
+  if (idx === 3) { _heatmapYear = null; _heatmapMonth = null; createChart(); renderHeatmap(); }
   if (idx === 1) { renderGarden(gState.records, gState.settings); }
 }
 
@@ -1876,8 +1950,7 @@ function renderLeaderboardContent() {
     renderList(myEntry.todayMl > 0 ? [myEntry] : []);
   }
 
-  if (lbInterval) { clearInterval(lbInterval); }
-  lbInterval = setInterval(function() { if (document.getElementById('page-leaderboard').classList.contains('active')) { renderLeaderboard(); } }, 10000);
+  if (lbInterval) { clearInterval(lbInterval); lbInterval = null; }
 }
 
 var _lastRefreshTime = 0;
@@ -2092,23 +2165,28 @@ function switchLB(period) {
   document.querySelectorAll('#lbTabs button').forEach(function(b) { b.classList.toggle('active', b.textContent.trim() === (period === 'today' ? '\u4eca\u65e5' : period === 'week' ? '\u672c\u5468' : '\u672c\u6708')); });
   renderLeaderboard();
 }
+var _heatmapYear = null;
+var _heatmapMonth = null;
+
 function renderHeatmap() {
   var wrap = document.getElementById('heatmapWrap');
   if (!wrap) return;
   var records = gState.records;
   var goal = gState.settings.dailyGoal;
   var now = new Date();
-  var year = now.getFullYear();
-  var month = now.getMonth();
+  if (_heatmapYear === null) _heatmapYear = now.getFullYear();
+  if (_heatmapMonth === null) _heatmapMonth = now.getMonth();
+  var year = _heatmapYear;
+  var month = _heatmapMonth;
   var days = new Date(year, month + 1, 0).getDate();
   var firstDay = new Date(year, month, 1).getDay();
   var totalByDay = {};
   records.forEach(function(r) { if (r.dateKey) { totalByDay[r.dateKey] = (totalByDay[r.dateKey] || 0) + r.amount; } });
-  var html = '<div class="heatmap-month">' + year + '.' + String(month+1).padStart(2,'0') + '</div><div class="heatmap-grid">';
+  var html = '<div class="heatmap-grid">';
   var weekdays = ['\u65e5','\u4e00','\u4e8c','\u4e09','\u56db','\u4e94','\u516d'];
   for (var w = 0; w < 7; w++) { html += '<div class="heatmap-day" style="font-size:0.5625rem;color:#bbb;">' + weekdays[w] + '</div>'; }
   for (var i = 0; i < firstDay; i++) { html += '<div class="heatmap-day"></div>'; }
-  var todayKey = year + '-' + String(month+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  var todayKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   for (var d = 1; d <= days; d++) {
     var key = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     var amt = totalByDay[key] || 0;
@@ -2116,7 +2194,7 @@ function renderHeatmap() {
     var isToday = (key === todayKey);
     var hasWater = (amt > 0);
     var cls = 'heatmap-day' + (hasWater ? ' has-data' : '') + (isToday ? ' today' : '');
-    html += '<div class="' + cls + '" style="position:relative;">';
+    html += '<div class="' + cls + '" style="position:relative;cursor:pointer;" onclick="showDayRecords(\'' + key + '\')">';
     if (hasWater) {
       html += '<div class="hm-water-wrap"><div class="hm-water-fill" style="height:' + fillPct + '%">';
       html += '<div class="hm-wave"><svg viewBox="0 0 30 6" preserveAspectRatio="none">';
@@ -2126,7 +2204,48 @@ function renderHeatmap() {
     html += '<div class="hm-date">' + d + (hasWater ? '<div class="hm-tip">' + key + ' ' + amt + 'ml</div>' : '') + '</div></div>';
   }
   html += '</div>';
+  var labelEl = document.getElementById('heatmapMonthLabel');
+  if (labelEl) labelEl.textContent = year + '.' + String(month+1).padStart(2,'0');
   wrap.innerHTML = html;
+}
+
+/* 日历翻月 */
+function prevMonth() {
+  _heatmapMonth--;
+  if (_heatmapMonth < 0) { _heatmapMonth = 11; _heatmapYear--; }
+  renderHeatmap();
+}
+function nextMonth() {
+  _heatmapMonth++;
+  if (_heatmapMonth > 11) { _heatmapMonth = 0; _heatmapYear++; }
+  renderHeatmap();
+}
+
+/* 点击日历日期，显示当天的喝水记录 */
+function showDayRecords(dateKey) {
+  var dayRecords = gState.records.filter(function(r) { return r.dateKey === dateKey; });
+  var total = 0;
+  var listHtml = '';
+  for (var i = 0; i < dayRecords.length; i++) {
+    var r = dayRecords[i];
+    total += r.amount;
+    var t = new Date(r.dateTime);
+    var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    var mood = r.mood || '';
+    listHtml += '<div style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light);">' +
+      '<span style="font-size:1.125rem;margin-right:8px;">\u{1F4A7}</span>' +
+      '<div style="flex:1;"><span style="font-weight:600;">' + r.amount + ' ml</span>' +
+      (mood ? ' <span style="font-size:0.875rem;">' + mood + '</span>' : '') +
+      '<div style="font-size:0.6875rem;color:var(--text-secondary);margin-top:1px;">' + timeStr + '</div></div></div>';
+  }
+  var listContent = listHtml || '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.8125rem;">这天没有喝水记录</div>';
+  var content = '<div style="max-height:50vh;overflow-y:auto;">' + listContent + '</div>';
+  if (total > 0) {
+    content += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;">合计：<span style="font-weight:700;color:var(--primary);">' + total + ' ml</span></div>';
+  }
+  var parts = dateKey.split('-');
+  var title = parts[0] + '.' + parts[1] + '.' + parts[2];
+  showModal('\uD83D\uDCC5 ' + title, content, [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]);
 }
 
 loadAll();

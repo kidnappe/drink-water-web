@@ -48,7 +48,7 @@
     .mood-help:hover { opacity: 1; background: #d0e2f8; }
     .dark-mode .mood-help { color: #7bb3e8; background: rgba(74,144,226,.2); }
     /* ── 深色模式完整样式 ── */
-    .dark-mode { background: #1a1a2e; color: #e0e0e0; }
+    .dark-mode { background: #1a1a2e; color: #e0e0e0; --bg: #1a1a2e; --card-bg: #1e1e38; --nav-bg: #16213e; --border: #2a2a4a; --border-light: #2a2a4a; --text-secondary: #888; }
     .dark-mode .appbar { background: #16213e; }
     .dark-mode .bottom-nav { background: #16213e; border-color: #2a2a4a; }
     .dark-mode .bottom-nav button { color: #666; }
@@ -57,8 +57,12 @@
     .dark-mode .card-title { color: #ccc; }
     .dark-mode .lb-card { background: #1e1e38; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .dark-mode .lb-item { background: #252545; border-color: #2a2a4a; }
+    .dark-mode .lb-item:nth-child(even) { background: #222240; }
+    .dark-mode .lb-item:hover { background: #2a2a50; }
     .dark-mode .lb-me { background: #1a2a4a !important; border-color: #3a6aaa; }
     .dark-mode .setting-item { border-color: #2a2a4a; }
+    .dark-mode .setting-item[style*="border-top"] { border-top-color: #2a2a4a !important; }
+    .dark-mode .setting-item[style*="border-bottom"] { border-bottom-color: #2a2a4a !important; }
     .dark-mode .setting-label { color: #ddd; }
     .dark-mode .setting-desc { color: #888; }
     .dark-mode .setting-arrow { color: #555; }
@@ -78,6 +82,8 @@
     .dark-mode .record-del { color: #ef5350; }
     .dark-mode .chart-box { background: #1e1e38; }
     .dark-mode .toast { background: #444; }
+    .dark-mode #syncDebugSummary { background: #2a2a4a !important; color: #aaa !important; }
+    .dark-mode #syncDebugFull { background: #222240 !important; color: #888 !important; border-top-color: #3a3a5a !important; }
     .dark-mode .heatmap-day { color: #888; }
     .dark-mode .heatmap-day.has-data { color: #fff; }
     .dark-mode .track-bg { background: #2a2a4a; }
@@ -86,6 +92,8 @@
     .dark-mode .chart-toggle button { background: #2a2a4a; border-color: #3a3a5a; color: #999; }
     .dark-mode .chart-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .dark-mode #darkAutoBtn { border-color: #7bb3e8 !important; color: #7bb3e8 !important; }
+    .setting-item.disabled { opacity: 0.45; pointer-events: none; }
+    .dark-mode .heatmap-wrap + div button { background: #2a2a4a !important; color: #7bb3e8 !important; }
     .lb-list { display: flex; flex-direction: column; gap: 6px; }
     .lb-item { display: flex; align-items: center; padding: 10px 12px; background: #f8faff; border-radius: 10px; border: 1px solid #eef3fb; cursor: pointer; transition: background .15s; }
     .lb-item:hover { background: #f0f5ff; }
@@ -411,10 +419,15 @@
       <div class="setting-info"><div class="setting-label">连接手表</div><div class="setting-desc">生成配对码，手表输入后同步数据</div></div>
       <span class="setting-arrow">›</span>
     </div>
-    <div class="setting-item" onclick="forceSync()">
+    <div class="setting-item" id="syncSettingItem" onclick="forceSync()">
       <span class="setting-icon">🔄</span>
-      <div class="setting-info"><div class="setting-label">立即同步</div><div class="setting-desc">手动触发一次双向数据同步</div></div>
+      <div class="setting-info"><div class="setting-label" id="syncSettingLabel">立即同步</div><div class="setting-desc" id="syncSettingDesc">手动触发一次双向数据同步</div></div>
       <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="disconnectWatch()">
+      <span class="setting-icon">⌚</span>
+      <div class="setting-info"><div class="setting-label" style="color:var(--danger);">断开手表</div><div class="setting-desc" id="watchDisconnectDesc">停止与手表的数据互通</div></div>
+      <span class="setting-arrow" style="color:var(--danger);">›</span>
     </div>
     <div id="syncDebugWrap" style="display:none;margin:6px 0;">
       <div id="syncDebugSummary" style="font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;line-height:1.6;cursor:pointer;" onclick="toggleSyncDebug()"></div>
@@ -486,6 +499,17 @@ var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
 var ANON_USER_KEY = 'drink_water_user_id';
 
 /* ── Supabase 集成（排行榜在线版） ── */
+var WATCH_DISCONNECTED_KEY = 'drink_water_watch_disconnected';
+
+function isWatchDisconnected() {
+  return localStorage.getItem(WATCH_DISCONNECTED_KEY) === '1';
+}
+
+function setWatchDisconnected(val) {
+  if (val) localStorage.setItem(WATCH_DISCONNECTED_KEY, '1');
+  else localStorage.removeItem(WATCH_DISCONNECTED_KEY);
+}
+
 function getAnonUserId() {
   var id = localStorage.getItem(ANON_USER_KEY);
   if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem(ANON_USER_KEY, id); }
@@ -650,6 +674,7 @@ function fetchMyTodayRecordsFromCloud() {
 /* 将云端今日记录合并到本地 records（按 id 去重） */
 function mergeCloudTodayRecords() {
   if (!isSupabaseConfigured()) return Promise.resolve(0);
+  if (isWatchDisconnected()) { syncDebug('⌚ 手表已断开，跳过拉取'); return Promise.resolve(0); }
   return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
     if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) {
       syncDebug('📥 云端无数据可合并');
@@ -686,11 +711,14 @@ function mergeCloudTodayRecords() {
       if (!cr.id) return;
       if (!localIds[cr.id]) {
         /* 云端有但本地没有 → 追加 */
+        var crDate = new Date(cr.time);
+        var crDateKey = crDate.getFullYear() + '-' + String(crDate.getMonth()+1).padStart(2,'0') + '-' + String(crDate.getDate()).padStart(2,'0');
+        if (crDateKey !== todayKey) return;  /* 只合并今日记录 */
         gState.records.push({
           id: cr.id,
           amount: cr.amount,
           dateTime: cr.time,
-          dateKey: todayKey,
+          dateKey: crDateKey,
           mood: cr.mood || ''
         });
         merged++;
@@ -721,6 +749,8 @@ function generatePairingCode() {
     body: JSON.stringify({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() })
   }).then(function(resp) {
     if (!resp.ok) { console.warn('Pairing code upload failed:', resp.status); showToast('配对码生成失败'); return; }
+    setWatchDisconnected(false);
+    updateSettingsUI();
     showModal('📱 连接手表',
       '<div style="text-align:center;padding:16px 0;">' +
       '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
@@ -799,6 +829,15 @@ function forceSync() {
   var phoneLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
   var phoneMl = phoneLocal.reduce(function(s, r) { return s + r.amount; }, 0);
   syncDebug('📱 手机本地: ' + phoneLocal.length + ' 条, ' + phoneMl + 'ml');
+
+  if (isWatchDisconnected()) {
+    syncDebug('⌚ 手表已断开，仅推送排行榜（不拉取合并）');
+    syncTodayToLeaderboard().then(function() {
+      syncDebug('✅ 同步完成（手表断开模式）');
+      showToast('已推送排行榜，手表数据未拉取');
+    });
+    return;
+  }
 
   /* 与手表版一致的流程：先推 → 再拉合并 */
   syncDebug('📤 推送本地数据到云端...');
@@ -1670,6 +1709,31 @@ function updateSettingsUI() {
   if (sbDesc) { sbDesc.textContent = isSupabaseConfigured() ? '\u2705 \u5df2\u8fde\u63a5' : '\u26a0\ufe0f \u672a\u914d\u7f6e'; }
   var intervalDesc = document.getElementById('settingIntervalDesc');
   if (intervalDesc) { intervalDesc.textContent = '每 ' + (s.reminderInterval || 30) + ' \u5206\u949f'; }
+  /* 断开手表按钮状态 */
+  var disconnected = isWatchDisconnected();
+  var watchDesc = document.getElementById('watchDisconnectDesc');
+  if (watchDesc) { watchDesc.textContent = disconnected ? '已断开' : '停止与手表的数据互通'; }
+  /* 同步按钮变灰 */
+  var syncItem = document.getElementById('syncSettingItem');
+  var syncLabel = document.getElementById('syncSettingLabel');
+  var syncDesc = document.getElementById('syncSettingDesc');
+  if (syncItem && syncLabel && syncDesc) {
+    syncItem.className = 'setting-item' + (disconnected ? ' disabled' : '');
+    syncLabel.textContent = disconnected ? '仅推送排行榜' : '立即同步';
+    syncDesc.textContent = disconnected ? '手表已断开，不拉取云端记录' : '手动触发一次双向数据同步';
+  }
+}
+
+/* 断开手表 */
+function disconnectWatch() {
+  showModal('断开手表', '断开后手机将不再拉取云端数据，仅推送排行榜。<br><br>点击「连接手表」可恢复同步。',
+    [{ text: '取消', cls: 'btn-cancel', action: hideModal },
+     { text: '断开手表', cls: 'btn-danger', action: function() {
+      setWatchDisconnected(true);
+      hideModal();
+      updateSettingsUI();
+      showToast('已断开手表，同步已暂停');
+    }}]);
 }
 
 /* 断开排行榜：清除 Supabase 配置与用户身份，恢复本地模式 */
@@ -1895,13 +1959,19 @@ function renderLeaderboard() {
 
 function renderLeaderboardContent() {
   var me = getMyAnimal();
-  var myTotal = getTodayTotal(gState.records);
+  /* 从缓存取三个周期的累计值 */
+  ensureCache();
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
   var myTodayRecs = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; });
-  var myEntry = { emoji: me.emoji, name: me.name, todayMl: myTotal, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+  var myEntry = { emoji: me.emoji, name: me.name, todayMl: _cacheToday, weekMl: _cacheWeek, monthMl: _cacheMonth, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+
+  /* 根据当前选项卡决定用哪个字段排序和展示 */
+  function getPeriodMl(u) {
+    return lbPeriod === 'today' ? (u.todayMl || 0) : lbPeriod === 'week' ? (u.weekMl || 0) : (u.monthMl || 0);
+  }
 
   function renderList(allUsers) {
-    allUsers.sort(function(a, b) { return b.todayMl - a.todayMl; });
+    allUsers.sort(function(a, b) { return getPeriodMl(b) - getPeriodMl(a); });
     allUsers = allUsers.slice(0, 20);
     var html = '';
     allUsers.forEach(function(u, i) {
@@ -1910,8 +1980,9 @@ function renderLeaderboardContent() {
       var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
       /* 不再内嵌 today_records，改为存 user_id，点击时按需拉取 */
       var uid = u.isMe ? '' : (u.user_id || '');
-      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" onclick="event.stopPropagation();deleteUserRanking(\'' + uid + '\',\'' + u.name.replace(/'/g, "\\'") + '\')" title="删除此用户排名">✕</span>' : '';
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" data-deluid="' + uid + '" data-delnick="' + u.name.replace(/"/g, '&quot;') + '" title="删除此用户排名">✕</span>' : '';
+      var periodMl = getPeriodMl(u);
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + periodMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
   }
@@ -1931,6 +2002,8 @@ function renderLeaderboardContent() {
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
             todayMl: u.today_ml || 0,
+            weekMl: u.week_ml || 0,
+            monthMl: u.month_ml || 0,
             streak: u.streak || 0,
             todayRecords: [],  /* 列表页不拉明细 */
             isMe: isMe

@@ -438,17 +438,30 @@ function isSupabaseConfigured() {
   return cfg.url && cfg.key && cfg.url.length > 10 && cfg.key.length > 10;
 }
 
-/* 尝试创建 Supabase 客户端；配置为空时返回 null */
-var _sbClient = null;
-function getSupabaseClient() {
-  if (_sbClient) return _sbClient;
-  if (!isSupabaseConfigured()) return null;
-  if (typeof supabase === 'undefined') return null;
+/* 原生 fetch 封装：向 Supabase REST API 发请求，不依赖任何外部库 */
+function sbFetch(path, options) {
+  options = options || {};
   var cfg = loadSupabaseConfig();
-  try {
-    _sbClient = supabase.createClient(cfg.url, cfg.key);
-    return _sbClient;
-  } catch(e) { return null; }
+  if (!cfg.url || !cfg.key) return Promise.reject(new Error('Supabase 未配置'));
+  var url = cfg.url.replace(/\/+$/, '') + '/rest/v1/' + path.replace(/^\//, '');
+  var headers = {
+    'apikey': cfg.key,
+    'Authorization': 'Bearer ' + cfg.key,
+    'Content-Type': 'application/json'
+  };
+  if (options.headers) { Object.assign(headers, options.headers); }
+  return fetch(url, {
+    method: options.method || 'GET',
+    headers: headers,
+    body: options.body || null
+  }).then(function(resp) {
+    return {
+      ok: resp.ok,
+      status: resp.status,
+      json: function() { return resp.json().catch(function() { return null; }); },
+      text: function() { return resp.text(); }
+    };
+  });
 }
 
 /* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
@@ -462,12 +475,12 @@ function syncTodayToLeaderboard() {
     return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
   });
   syncDebug('📤 推送 ' + todayRecords.length + ' 条, 总量 ' + total + 'ml, 连续 ' + streak + ' 天');
-  syncDebug('📤 推送记录 ID: ' + todayRecords.map(function(r) { return r.id.substring(0, 6); }).join(', '));
-  var client = getSupabaseClient();
-  if (!client) { syncDebug('❌ 推送失败：无法创建 Supabase 客户端'); return Promise.resolve(); }
-  return client
-    .from('leaderboard')
-    .upsert({
+  syncDebug('📤 推送记录 ID: ' + todayRecords.map(function(r) { return r.id; }).join(', '));
+  if (!navigator.onLine) { syncDebug('❌ 推送失败：网络不可用'); return Promise.resolve(); }
+  return sbFetch('leaderboard?on_conflict=user_id', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({
       user_id: getAnonUserId(),
       nickname: me.name,
       avatar_idx: me.idx,
@@ -476,45 +489,37 @@ function syncTodayToLeaderboard() {
       today_records: todayRecords,
       banned: false,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' })
-    .then(function(resp) {
-      if (resp.error) {
-        syncDebug('❌ 推送失败: ' + resp.error.message);
-      } else {
-        syncDebug('✅ 推送成功');
-      }
-    });
+    })
+  }).then(function(resp) {
+    if (resp.ok) {
+      syncDebug('✅ 推送成功');
+    } else {
+      syncDebug('❌ 推送失败: HTTP ' + resp.status);
+    }
+  }).catch(function(e) {
+    syncDebug('❌ 推送异常: ' + (e.message || e));
+  });
 }
 
 /* 从 Supabase 获取在线排行榜（最多 20 条） */
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
-  var client = getSupabaseClient();
-  if (!client) return Promise.resolve(null);
-  return client
-    .from('leaderboard')
-    .select('user_id,nickname,avatar_idx,today_ml,streak,banned')  /* 仅拉列表展示字段，不拉 today_records */
-    .order('today_ml', { ascending: false })
-    .limit(20)
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,streak,banned&order=today_ml.desc&limit=20")
     .then(function(resp) {
-      if (resp.error) { console.warn('Fetch leaderboard failed:', resp.error); return null; }
-      return resp.data || null;
+      if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
+      return resp.json();
     });
 }
 
 /* 按需拉取某个用户的今日详细记录（点击排行榜头像时触发） */
 function fetchUserRecords(userId) {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
-  var client = getSupabaseClient();
-  if (!client) return Promise.resolve(null);
-  return client
-    .from('leaderboard')
-    .select('user_id,nickname,avatar_idx,today_records')
-    .eq('user_id', userId)
-    .maybeSingle()
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_records&user_id=eq." + encodeURIComponent(userId) + "&limit=1")
     .then(function(resp) {
-      if (resp.error) { console.warn('Fetch user records failed:', resp.error); return null; }
-      return resp.data || null;
+      if (!resp.ok) { console.warn('Fetch user records failed:', resp.status); return null; }
+      return resp.json().then(function(data) {
+        return (data && data.length > 0) ? data[0] : null;
+      });
     });
 }
 /* 拉取当前用户在云端的今日记录（用于设备间同步合并） */
@@ -545,7 +550,7 @@ function fetchMyTodayRecordsFromCloud() {
     syncDebug('🔍 返回 today_records: ' + recs.length + ' 条');
     if (recs.length > 0) {
       var details = recs.map(function(r) {
-        return (r.id || '').substring(0, 6) + '=' + (r.amount || 0) + 'ml' + (r.mood || '');
+        return (r.id || '') + '=' + (r.amount || 0) + 'ml' + (r.mood || '');
       }).join(', ');
       syncDebug('🔍 记录详情: ' + details);
     }
@@ -569,6 +574,26 @@ function mergeCloudTodayRecords() {
     /* 建立本地今日记录 id 索引 */
     gState.records.forEach(function(r) { if (r.dateKey === todayKey) localIds[r.id] = true; });
     syncDebug('📥 本地已有 ' + Object.keys(localIds).length + ' 条, 云端 ' + cloudRecs.length + ' 条');
+    /* 建立云端 id 索引 */
+    var cloudIds = {};
+    cloudRecs.forEach(function(cr) { if (cr.id) cloudIds[cr.id] = true; });
+    /* 双向同步：
+       1) 本地有但云端没有 → 已删除 → 本地也删掉
+       2) 云端有但本地没有 → 已新增 → 本地加上 */
+    var removed = 0;
+    var removedIds = [];
+    gState.records = gState.records.filter(function(r) {
+      if (r.dateKey !== todayKey) return true;
+      if (r.id && !cloudIds[r.id]) {
+        removed++;
+        removedIds.push(r.id);
+        return false;
+      }
+      return true;
+    });
+    if (removed > 0) {
+      syncDebug('📥 云端已删除 ' + removed + ' 条: ' + removedIds.join(', '));
+    }
     var merged = 0;
     var mergedIds = [];
     cloudRecs.forEach(function(cr) {
@@ -583,14 +608,14 @@ function mergeCloudTodayRecords() {
           mood: cr.mood || ''
         });
         merged++;
-        mergedIds.push(cr.id.substring(0, 6));
+        mergedIds.push(cr.id);
       }
     });
-    if (merged > 0) {
-      syncDebug('📥 合并了 ' + merged + ' 条: ' + mergedIds.join(', '));
+    if (merged > 0 || removed > 0) {
+      syncDebug('📥 新增 ' + merged + ' 条, 移除 ' + removed + ' 条');
       saveRecords(gState.records);
     } else {
-      syncDebug('📥 无新记录（云端 ID 全部已在本地）');
+      syncDebug('📥 无变化');
     }
     return merged;
   });
@@ -602,23 +627,22 @@ function generatePairingCode() {
     showToast('请先在排行榜设置中配置 Supabase');
     return Promise.reject();
   }
-  var client = getSupabaseClient();
-  if (!client) { showToast('Supabase 连接失败'); return Promise.reject(); }
   var code = String(Math.floor(100000 + Math.random() * 900000));
   var uid = getAnonUserId();
-  return client
-    .from('device_pairing')
-    .upsert({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() }, { onConflict: 'pairing_code' })
-    .then(function(resp) {
-      if (resp.error) { console.warn('Pairing code upload failed:', resp.error); showToast('配对码生成失败'); return; }
-      showModal('📱 连接手表',
-        '<div style="text-align:center;padding:16px 0;">' +
-        '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
-        '<div style="font-size:2.5rem;font-weight:700;letter-spacing:8px;color:#4A90E2;">' + code + '</div>' +
-        '<div style="font-size:0.75rem;color:#999;margin-top:10px;">配对码 5 分钟内有效</div></div>',
-        [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
-      );
-    });
+  return sbFetch('device_pairing?on_conflict=pairing_code', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() })
+  }).then(function(resp) {
+    if (!resp.ok) { console.warn('Pairing code upload failed:', resp.status); showToast('配对码生成失败'); return; }
+    showModal('📱 连接手表',
+      '<div style="text-align:center;padding:16px 0;">' +
+      '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
+      '<div style="font-size:2.5rem;font-weight:700;letter-spacing:8px;color:#4A90E2;">' + code + '</div>' +
+      '<div style="font-size:0.75rem;color:#999;margin-top:10px;">配对码 5 分钟内有效</div></div>',
+      [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
+    );
+  });
 }
 
 /* 同步调试日志（在设置页显示，可展开/收起） */
@@ -1196,25 +1220,25 @@ function testSupabaseConnection() {
   var url = document.getElementById('sbUrlInput').value.trim();
   var key = document.getElementById('sbKeyInput').value.trim();
   if (!url || !key) { showToast('\u8bf7\u586b\u5199\u5b8c\u6574\u7684 URL \u548c Key'); return; }
-  /* 临时保存并创建客户端测试 */
+  /* 临时保存并测试连接 */
   saveSupabaseConfig({ url: url, key: key });
-  _sbClient = null;
-  var client = getSupabaseClient();
-  if (!client) { showToast('\u8fde\u63a5\u5931\u8d25\uff1a\u65e0\u6cd5\u521b\u5efa\u5ba2\u6237\u7aef'); return; }
-  client.from('leaderboard').select('count', { count: 'exact', head: true }).then(function(resp) {
-    if (resp.error) {
-      showToast('\u8fde\u63a5\u5931\u8d25\uff1a' + (resp.error.message || '\u67e5\u8be2\u9519\u8bef'));
-      /* 恢复旧配置 */
+  sbFetch('leaderboard?select=count&limit=1')
+    .then(function(resp) {
+      if (!resp.ok) {
+        showToast('\u8fde\u63a5\u5931\u8d25\uff1aHTTP ' + resp.status);
+        /* 恢复旧配置 */
+        saveSupabaseConfig({ url: '', key: '' });
+      } else {
+        showToast('\u2705 \u8fde\u63a5\u6210\u529f\uff01\u6392\u884c\u699c\u5df2\u542f\u7528\u5728\u7ebf\u6a21\u5f0f');
+        hideModal();
+        updateSettingsUI();
+        /* 连接成功后清除封禁状态 */
+        clearBan();
+      }
+    }).catch(function(e) {
+      showToast('\u8fde\u63a5\u5931\u8d25\uff1a' + (e.message || '\u7f51\u7edc\u9519\u8bef'));
       saveSupabaseConfig({ url: '', key: '' });
-      _sbClient = null;
-    } else {
-      showToast('\u2705 \u8fde\u63a5\u6210\u529f\uff01\u6392\u884c\u699c\u5df2\u542f\u7528\u5728\u7ebf\u6a21\u5f0f');
-      hideModal();
-      updateSettingsUI();
-      /* 连接成功后清除封禁状态 */
-      clearBan();
-    }
-  });
+    });
 }
 /* ── 结束 Supabase 配置对话框 ── */
 
@@ -1316,31 +1340,99 @@ function getChartData() {
 }
 
 function createChart() {
-  if (gState.chartInstance) { gState.chartInstance.destroy(); gState.chartInstance = null; }
   var canvas = document.getElementById('chartCanvas');
   if (!canvas) return;
   var chartData = getChartData();
   if (!chartData) return;
-  canvas.width = canvas.parentElement.clientWidth - 2;
+  var container = canvas.parentElement;
+  canvas.width = container.clientWidth - 2;
   canvas.height = 200;
-  gState.chartInstance = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: chartData.labels,
-      datasets: [
-        { label: '\u559d\u6c34\u91cf (ml)', data: chartData.data,
-          backgroundColor: chartData.data.map(function(v) { return v >= chartData.goal ? 'rgba(76,175,80,0.7)' : 'rgba(74,144,226,0.7)'; }),
-          borderColor: chartData.data.map(function(v) { return v >= chartData.goal ? '#4CAF50' : '#4A90E2'; }),
-          borderWidth: 1, borderRadius: 4, barPercentage: 0.4 },
-        { label: '\u76ee\u6807\u7ebf', data: chartData.data.map(function() { return chartData.goal; }), type: 'line',
-          borderColor: '#e74c3c', borderWidth: 2, borderDash: [5,5], pointRadius: 0, fill: false, tension: 0 }
-      ]
-    },
-    options: { responsive: false, animation: { duration: 0 }, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                x: { offset: true, ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } } },
-      layout: { padding: { right: 8 } } }
-  });
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  var pad = { top: 16, bottom: 24, left: 36, right: 10 };
+  var chartW = w - pad.left - pad.right;
+  var chartH = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+
+  var labels = chartData.labels;
+  var values = chartData.data;
+  var goal = chartData.goal;
+  if (!labels || !values || labels.length === 0) return;
+
+  var maxVal = Math.max.apply(null, values);
+  if (maxVal < goal) maxVal = goal;
+  maxVal = Math.ceil(maxVal / 100) * 100 || 100;
+  var barCount = labels.length;
+  var barGap = 4;
+  var barTotal = chartW / barCount;
+  var barW = Math.max(barTotal - barGap, 2);
+
+  /* Y 轴网格线 + 刻度 */
+  var ySteps = 4;
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillStyle = '#999';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (var i = 0; i <= ySteps; i++) {
+    var yVal = Math.round(maxVal / ySteps * i);
+    var y = pad.top + chartH - (yVal / maxVal * chartH);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+    ctx.fillText(yVal.toString(), pad.left - 4, y);
+  }
+
+  /* 画柱子 */
+  for (var j = 0; j < barCount; j++) {
+    var x = pad.left + j * barTotal + barGap / 2;
+    var barH = (values[j] / maxVal) * chartH;
+    var barY = pad.top + chartH - barH;
+    var isGoal = values[j] >= goal;
+    ctx.fillStyle = isGoal ? 'rgba(76,175,80,0.7)' : 'rgba(74,144,226,0.7)';
+    ctx.strokeStyle = isGoal ? '#4CAF50' : '#4A90E2';
+    ctx.lineWidth = 1;
+    var r = Math.min(4, barW / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, barY);
+    ctx.lineTo(x + barW - r, barY);
+    ctx.quadraticCurveTo(x + barW, barY, x + barW, barY + r);
+    ctx.lineTo(x + barW, pad.top + chartH);
+    ctx.lineTo(x, pad.top + chartH);
+    ctx.lineTo(x, barY + r);
+    ctx.quadraticCurveTo(x, barY, x + r, barY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    /* X 轴标签 */
+    ctx.fillStyle = '#999';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.save();
+    ctx.translate(x + barW / 2, pad.top + chartH + 4);
+    ctx.rotate(labels[j].length > 3 ? -0.5 : 0);
+    ctx.fillText(labels[j], 0, 0);
+    ctx.restore();
+  }
+
+  /* 目标线 */
+  if (goal > 0) {
+    var goalY = pad.top + chartH - (goal / maxVal * chartH);
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, goalY);
+    ctx.lineTo(w - pad.right, goalY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
 function switchChart(isWeek) {
@@ -1784,10 +1876,8 @@ function deleteUserRanking(userId, userName) {
         [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
          { text: '\u786e\u8ba4\u5220\u9664', cls: 'btn-danger', action: function() {
           if (!isSupabaseConfigured()) { showToast('\u6392\u884c\u699c\u672a\u914d\u7f6e'); return; }
-          var client = getSupabaseClient();
-          if (!client) { showToast('\u8fde\u63a5\u5931\u8d25'); return; }
           hideModal();
-          banUserOnCloud(client, userId, userName);
+          banUserOnCloud(userId, userName);
         }}]
       );
     }}]
@@ -1795,56 +1885,57 @@ function deleteUserRanking(userId, userName) {
 }
 
 /* 管理员封禁用户：删除排行榜数据并标记 banned=true */
-function banUserOnCloud(client, userId, userName) {
-  client.from('leaderboard').delete().eq('user_id', userId).then(function(resp) {
-    if (resp.error) { showToast('\u64cd\u4f5c\u5931\u8d25\uff1a' + resp.error.message); return; }
-    /* 再插入一条标记为封禁（使对方下次加载时能检测到） */
-    return client.from('leaderboard').upsert({
-      user_id: userId,
-      banned: true,
-      today_ml: 0,
-      nickname: userName + '(已断开)',
-      today_records: [],
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
-  }).then(function(resp2) {
-    if (resp2 && resp2.error) { showToast('\u5c01\u7981\u5931\u8d25\uff1a' + resp2.error.message); return; }
-    showToast('\u5df2\u65ad\u5f00 ' + userName + ' \u7684\u6392\u884c\u699c\u8fde\u63a5');
-    renderLeaderboard();
-  });
+function banUserOnCloud(userId, userName) {
+  /* 第 1 步：删除该用户的排名数据 */
+  sbFetch('leaderboard?user_id=eq.' + encodeURIComponent(userId), { method: 'DELETE' })
+    .then(function(resp) {
+      if (!resp.ok) { showToast('\u64cd\u4f5c\u5931\u8d25\uff1aHTTP ' + resp.status); return null; }
+      /* 第 2 步：插入一条标记为封禁记录 */
+      return sbFetch('leaderboard?on_conflict=user_id', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({
+          user_id: userId,
+          banned: true,
+          today_ml: 0,
+          nickname: userName + '(已断开)',
+          today_records: [],
+          updated_at: new Date().toISOString()
+        })
+      });
+    }).then(function(resp2) {
+      if (resp2 && !resp2.ok) { showToast('\u5c01\u7981\u5931\u8d25\uff1aHTTP ' + resp2.status); return; }
+      showToast('\u5df2\u65ad\u5f00 ' + userName + ' \u7684\u6392\u884c\u699c\u8fde\u63a5');
+      renderLeaderboard();
+    });
 }
 
 /* 检测当前用户是否被封禁 */
 function checkBanStatus() {
   if (!isSupabaseConfigured()) return Promise.resolve(false);
-  var client = getSupabaseClient();
-  if (!client) return Promise.resolve(false);
-  return client
-    .from('leaderboard')
-    .select('banned')
-    .eq('user_id', getAnonUserId())
-    .maybeSingle()
+  return sbFetch('leaderboard?select=banned&user_id=eq.' + encodeURIComponent(getAnonUserId()) + '&limit=1')
     .then(function(resp) {
-      if (resp.error) { return false; }
-      return resp.data && resp.data.banned === true;
-    });
+      if (!resp.ok) return false;
+      return resp.json().then(function(data) {
+        return data && data.length > 0 && data[0].banned === true;
+      });
+    }).catch(function() { return false; });
 }
 
 /* 清除封禁（"测试连接"成功后调用） */
 function clearBan() {
   if (!isSupabaseConfigured()) return Promise.resolve();
-  var client = getSupabaseClient();
-  if (!client) return Promise.resolve();
-  return client
-    .from('leaderboard')
-    .upsert({
+  return sbFetch('leaderboard?on_conflict=user_id', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({
       user_id: getAnonUserId(),
       banned: false,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' })
-    .then(function(resp) {
-      if (resp.error) console.warn('Clear ban failed:', resp.error);
-    });
+    })
+  }).then(function(resp) {
+    if (!resp.ok) console.warn('Clear ban failed:', resp.status);
+  });
 }
 
 function switchLB(period) {
@@ -1893,22 +1984,6 @@ loadAll();
 </script>
 <script>
 if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem('dark_mode') || 'auto'); }); }
-</script>
-<!-- 外部依赖：页面渲染后再加载，不影响首屏 -->
-<script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-/* 外部脚本加载完成后，重试云端合并 */
-document.addEventListener('DOMContentLoaded', function() {
-  if (!window._cloudMergedRetry) {
-    window._cloudMergedRetry = true;
-    if (typeof mergeCloudTodayRecords === 'function') {
-      mergeCloudTodayRecords().then(function(count) {
-        if (count > 0 && typeof refreshUI === 'function') refreshUI();
-      });
-    }
-  }
-});
 </script>
 </body>
 </html>

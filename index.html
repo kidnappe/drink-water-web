@@ -1069,6 +1069,21 @@ function fireConfetti() {
   }, 4000);
 }
 
+/* ── 记录渲染通用函数（主页、排行榜、日历三处共用） ── */
+function formatRecordLine(r) {
+  var d = new Date(r.dateTime || r.time);
+  var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  var ts = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  var mood = r.mood || '';
+  return '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);">' +
+    '<span style="font-size:1.25rem;margin-right:10px;">\u{1F4A7}</span>' +
+    '<div style="flex:1;"><span style="font-weight:600;">' + (mood ? mood + ' ' : '') + r.amount + ' ml</span>' +
+    '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + ds + ' ' + ts + '</div></div></div>';
+}
+function formatRecordTotal(total) {
+  return '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:var(--primary);">' + total + ' ml</span></div>';
+}
+
 function renderRecords(todayRecords) {
   var list = document.getElementById('recordList');
   document.getElementById('recordCount').textContent = '\u5171 ' + todayRecords.length + ' \u6761';
@@ -1096,7 +1111,7 @@ function renderRecords(todayRecords) {
     var addBtn = !r.mood
       ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="标注心情">➕</span>'
       : '';
-    div.innerHTML = '<div class="record-icon">\u{1F4A7}</div><div class="record-info"><div class="record-amount">' + moodHtml + r.amount + ' ml' + addBtn + '</div><div class="record-time">' + dateStr + ' ' + timeStr + '</div></div><button class="record-del" onclick="deleteRecord(\'' + r.id + '\')">\u2715</button>';
+    div.innerHTML = formatRecordLine(r) + '<button class="record-del" onclick="deleteRecord(\'' + r.id + '\')" style="flex-shrink:0;margin-left:8px;border:none;background:none;color:#e74c3c;font-size:1.125rem;cursor:pointer;padding:4px;">\u2715</button>';
     list.appendChild(div);
   });
   /* 展开/收起按钮 */
@@ -2100,18 +2115,8 @@ function renderUserRecordsModal(emoji, name, userId, records) {
   }
   var total = 0;
   var html = '<div style="max-height:50vh;overflow-y:auto;">';
-  records.forEach(function(r) {
-    total += r.amount;
-    var t = new Date(r.time);
-    var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
-    var moodStr = r.mood ? r.mood + ' ' : '';
-    html += '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">' +
-      '<span style="font-size:1.25rem;margin-right:10px;">\u{1F4A7}</span>' +
-      '<div style="flex:1;"><span style="font-weight:600;">' + moodStr + r.amount + ' ml</span>' +
-      '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + timeStr + '</div></div></div>';
-  });
-  html += '</div>';
-  html += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid #e0e0e0;margin-top:4px;">\u5408\u8ba1\uff1a<span style="font-weight:700;color:#4A90E2;">' + total + ' ml</span></div>';
+  records.forEach(function(r) { total += r.amount; html += formatRecordLine(r); });
+  html += '</div>' + formatRecordTotal(total);
   showModal(titleText + ' \u7684\u4eca\u65e5\u8bb0\u5f55', html,
     [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
   );
@@ -2300,25 +2305,13 @@ function showDayRecords(dateKey) {
   var total = 0;
   var listHtml = '';
   for (var i = 0; i < dayRecords.length; i++) {
-    var r = dayRecords[i];
-    total += r.amount;
-    var t = new Date(r.dateTime);
-    var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
-    var mood = r.mood || '';
-    listHtml += '<div style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light);">' +
-      '<span style="font-size:1.125rem;margin-right:8px;">\u{1F4A7}</span>' +
-      '<div style="flex:1;"><span style="font-weight:600;">' + r.amount + ' ml</span>' +
-      (mood ? ' <span style="font-size:0.875rem;">' + mood + '</span>' : '') +
-      '<div style="font-size:0.6875rem;color:var(--text-secondary);margin-top:1px;">' + timeStr + '</div></div></div>';
+    total += dayRecords[i].amount;
+    listHtml += formatRecordLine(dayRecords[i]);
   }
-  var listContent = listHtml || '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.8125rem;">这天没有喝水记录</div>';
-  var content = '<div style="max-height:50vh;overflow-y:auto;">' + listContent + '</div>';
-  if (total > 0) {
-    content += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;">合计：<span style="font-weight:700;color:var(--primary);">' + total + ' ml</span></div>';
-  }
+  var content = '<div style="max-height:50vh;overflow-y:auto;">' + (listHtml || '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.8125rem;">这天没有喝水记录</div>') + '</div>';
+  if (total > 0) content += formatRecordTotal(total);
   var parts = dateKey.split('-');
-  var title = parts[0] + '.' + parts[1] + '.' + parts[2];
-  showModal('\uD83D\uDCC5 ' + title, content, [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]);
+  showModal('\uD83D\uDCC5 ' + parts[0] + '.' + parts[1] + '.' + parts[2], content, [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]);
 }
 
 loadAll();

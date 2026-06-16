@@ -2443,13 +2443,6 @@ function showDayRecords(dateKey) {
 }
 
 loadAll();
-/* 加载 Twemoji，统一 emoji 样式 */
-var _twemojiScript = document.createElement('script');
-_twemojiScript.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';
-_twemojiScript.onload = function() {
-  if (typeof twemoji !== 'undefined') { twemoji.parse(document.body, { ext: '.svg' }); }
-};
-document.head.appendChild(_twemojiScript);
 /* 网络恢复时自动推送离线期间的数据 */
 window.addEventListener('online', function() {
   if (isSupabaseConfigured()) debouncedSync();

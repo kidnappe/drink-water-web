@@ -2447,6 +2447,11 @@ loadAll();
 window.addEventListener('online', function() {
   if (isSupabaseConfigured()) debouncedSync();
 });
+/* 注册 Service Worker（用于 PWA 安装） */
+var SW_DEPLOY = '20260617';
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js?v=' + SW_DEPLOY).catch(function() {});
+}
 </script>
 <script>
 if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem('dark_mode') || 'auto'); }); }

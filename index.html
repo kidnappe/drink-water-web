@@ -590,7 +590,7 @@ function syncTodayToLeaderboard() {
   var streak = calcStreak(gState.records, gState.settings.dailyGoal);
   var todayKey = getDateKey(new Date());
   var todayRecords = gState.records.filter(function(r) { return r.dateKey === todayKey; }).map(function(r) {
-    return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
+    return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '', type: r.type || '' };
   });
   syncDebug('📤 推送 ' + todayRecords.length + ' 条, 总量 ' + total + 'ml, 连续 ' + streak + ' 天');
   /* 从缓存取本周/本月累计 */

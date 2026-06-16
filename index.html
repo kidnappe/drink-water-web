@@ -1384,26 +1384,18 @@ function showAboutDialog() {
     '\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef' +
     '<br><br>' +
     '<span style="font-size:0.625rem;color:#999;word-break:break-all;">ID: ' + uid + '</span>' +
-    '<div style="max-height:320px;overflow-y:auto;border-top:1px solid var(--border);margin-top:12px;padding-top:10px;font-size:0.75rem;line-height:1.7;text-align:left;">' +
-    '<div style="font-weight:600;color:var(--text);margin-bottom:6px;">\u66f4\u65b0\u65e5\u5fd7</div>' +
-    '<div style="margin:8px 0 4px;font-weight:600;color:var(--primary);">v1.4.1 — \u81ea\u52a8\u540c\u6b65 + \u79bb\u7ebf\u652f\u6301</div>' +
-    '<div style="padding-left:10px;">\u2022 \u7f51\u7edc\u76d1\u542c\u81ea\u52a8\u63a8\u9001 — \u79bb\u7ebf\u671f\u95f4\u559d\u7684\u6c34\uff0c\u8054\u7f51\u540e\u81ea\u52a8\u63a8\u9001</div>' +
-    '<div style="padding-left:10px;">\u2022 PWA \u5b89\u88c5\u6062\u590d — \u91cd\u65b0\u542f\u7528 Service Worker</div>' +
-    '<div style="padding-left:10px;">\u2022 \u79bb\u7ebf\u53ef\u7528 — Service Worker \u7f13\u5b58\u9875\u9762\u6587\u4ef6</div>' +
-    '<div style="margin:8px 0 4px;font-weight:600;color:var(--primary);">v1.4.0 — \u65e5\u5386\u4ea4\u4e92 + \u6df1\u8272\u6a21\u5f0f + \u6392\u884c\u699c\u5468\u671f</div>' +
-    '<div style="padding-left:10px;">\u2022 \u65e5\u5386\u65e5\u671f\u53ef\u70b9\u3001\u7ffb\u6708</div>' +
-    '<div style="padding-left:10px;">\u2022 15ml \u5c0f\u53e3\u6309\u94ae</div>' +
-    '<div style="padding-left:10px;">\u2022 \u6392\u884c\u699c\u672c\u5468/\u672c\u6708</div>' +
-    '<div style="padding-left:10px;">\u2022 \u6df1\u8272\u6a21\u5f0f\u5b8c\u6574\u914d\u8272 + auto \u6309\u94ae</div>' +
-    '<div style="padding-left:10px;">\u2022 \u63d0\u9192\u5468\u671f\u53ef\u8c03</div>' +
-    '<div style="padding-left:10px;">\u2022 \u65ad\u5f00\u624b\u8868</div>' +
-    '<div style="margin:8px 0 4px;font-weight:600;color:var(--primary);">v1.3.0 — \u96f6\u5916\u90e8\u4f9d\u8d56 + \u540c\u6b65\u7a33\u5b9a</div>' +
-    '<div style="padding-left:10px;">\u2022 \u79fb\u9664\u5916\u90e8 CDN\uff0c\u4fee\u590d Safari \u6253\u4e0d\u5f00</div>' +
-    '<div style="padding-left:10px;">\u2022 \u4e3b\u952e\u4ece id \u6539\u4e3a user_id\uff0c\u4fee\u590d 409</div>' +
-    '</div>' +
+    '<div id="aboutChangelog" style="max-height:320px;overflow-y:auto;border-top:1px solid var(--border);margin-top:12px;padding-top:10px;font-size:0.75rem;line-height:1.7;text-align:left;"><div style="text-align:center;color:#999;padding:10px;">加载中...</div></div>' +
     '</div>',
-    [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
+    [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
   );
+  fetch('CHANGELOG.md').then(function(resp) {
+    if (!resp.ok) throw new Error();
+    return resp.text();
+  }).then(function(md) {
+    renderChangelog(md);
+  }).catch(function() {
+    renderChangelog(null);
+  });
 }
 
 function renderChangelog(md) {

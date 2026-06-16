@@ -1536,6 +1536,7 @@ function refreshUI() {
   renderRecords(getTodayRecords(gState.records));
   updateSettingsUI();
   updateStats();
+  setTimeout(function() { applyTwemoji(); }, 50);
 }
 
 function addWater(amount) {
@@ -1948,6 +1949,7 @@ function showModal(title, body, actions) {
     actionsEl.appendChild(btn);
   });
   document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(function() { applyTwemoji(); }, 50);
 }
 
 function hideModal() { document.getElementById('modalOverlay').classList.remove('show'); }
@@ -2443,6 +2445,14 @@ function showDayRecords(dateKey) {
 }
 
 loadAll();
+/* 加载 Twemoji，统一 emoji 样式 */
+function applyTwemoji(el) {
+  if (typeof twemoji !== 'undefined') twemoji.parse(el || document.body, { ext: '.svg', callback: function() {} });
+}
+var _ts = document.createElement('script');
+_ts.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';
+_ts.onload = function() { applyTwemoji(); };
+document.head.appendChild(_ts);
 /* 网络恢复时自动推送离线期间的数据 */
 window.addEventListener('online', function() {
   if (isSupabaseConfigured()) debouncedSync();

@@ -4,27 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/Icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="喝水记录">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>喝杯水吧</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f0f4fb; color: #333; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+    :root {
+      --primary: #4A90E2;
+      --primary-dark: #3D7BD5;
+      --danger: #e74c3c;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --bg: #f0f4fb;
+      --text: #333;
+      --text-secondary: #999;
+      --border: #e0e0e0;
+      --border-light: #f0f0f0;
+      --card-bg: #fff;
+      --nav-bg: #fff;
+    }
+    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
     .page { display: none; padding: 16px 16px 80px; }
     .page.active { display: block; }
-    .appbar { background: #4A90E2; color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
-    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; display: flex; border-top: 1px solid #e0e0e0; z-index: 100; }
-    .bottom-nav button { flex: 1; border: none; background: none; padding: 10px 0 8px; font-size: 0.75rem; color: #999; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .2s; }
+    .appbar { background: var(--primary); color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--nav-bg); display: flex; border-top: 1px solid var(--border); z-index: 100; }
+    .bottom-nav button { flex: 1; border: none; background: none; padding: 10px 0 8px; font-size: 0.75rem; color: var(--text-secondary); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .2s; }
     .bottom-nav button .icon { font-size: 1.375rem; }
-    .bottom-nav button.active { color: #4A90E2; }
-    .lb-card { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
+    .bottom-nav button.active { color: var(--primary); }
+    .lb-card { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
     .lb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .lb-header h3 { font-size: 0.9375rem; font-weight: 600; margin: 0; }
-    .lb-refresh { font-size: 0.875rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; border: none; background: #f0f4fb; color: #4A90E2; transition: all .2s; flex-shrink: 0; margin-left: 6px; }
+    .lb-refresh { font-size: 0.875rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; border: none; background: var(--bg); color: var(--primary); transition: all .2s; flex-shrink: 0; margin-left: 6px; }
     .lb-refresh:hover { background: #e0e8f5; }
     .lb-refresh:disabled { opacity: .4; cursor: not-allowed; }
-    .setting-item.disabled { opacity: 0.45; pointer-events: none; }
     .lb-refresh.spinning { animation: lbSpin .6s linear infinite; }
     @keyframes lbSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .lb-tabs { display: flex; gap: 4px; }
@@ -33,6 +47,53 @@
     .mood-help { font-size: 0.8125rem; cursor: pointer; margin-left: 6px; color: #4A90E2; opacity: .85; transition: opacity .2s; vertical-align: middle; background: #e8f0fe; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
     .mood-help:hover { opacity: 1; background: #d0e2f8; }
     .dark-mode .mood-help { color: #7bb3e8; background: rgba(74,144,226,.2); }
+    /* ── 深色模式完整样式 ── */
+    .dark-mode { background: #1a1a2e; color: #e0e0e0; --bg: #1a1a2e; --card-bg: #1e1e38; --nav-bg: #16213e; --border: #2a2a4a; --border-light: #2a2a4a; --text-secondary: #888; }
+    .dark-mode .appbar { background: #16213e; }
+    .dark-mode .bottom-nav { background: #16213e; border-color: #2a2a4a; }
+    .dark-mode .bottom-nav button { color: #666; }
+    .dark-mode .bottom-nav button.active { color: #7bb3e8; }
+    .dark-mode .card { background: #1e1e38; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .dark-mode .card-title { color: #ccc; }
+    .dark-mode .lb-card { background: #1e1e38; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .dark-mode .lb-item { background: #252545; border-color: #2a2a4a; }
+    .dark-mode .lb-item:nth-child(even) { background: #222240; }
+    .dark-mode .lb-item:hover { background: #2a2a50; }
+    .dark-mode .lb-me { background: #1a2a4a !important; border-color: #3a6aaa; }
+    .dark-mode .setting-item { border-color: #2a2a4a; }
+    .dark-mode .setting-item[style*="border-top"] { border-top-color: #2a2a4a !important; }
+    .dark-mode .setting-item[style*="border-bottom"] { border-bottom-color: #2a2a4a !important; }
+    .dark-mode .setting-label { color: #ddd; }
+    .dark-mode .setting-desc { color: #888; }
+    .dark-mode .setting-arrow { color: #555; }
+    .dark-mode .setting-switch { background: #444; }
+    .dark-mode .setting-switch.on { background: var(--primary); }
+    .dark-mode .modal { background: #1e1e38; }
+    .dark-mode .modal h3 { color: #ddd; }
+    .dark-mode .modal input { background: #2a2a4a; border-color: #3a3a5a; color: #ddd; }
+    .dark-mode .modal-actions .btn-cancel { background: #333; color: #ccc; }
+    .dark-mode .btn-water { background: #3a6aaa; }
+    .dark-mode .btn-water.custom { background: #cc7a00; }
+    .dark-mode .btn-water.sip { background: #1a2a4a; color: #7bb3e8; border-color: #3a6aaa; }
+    .dark-mode .mood-btn { background: #2a2a4a; }
+    .dark-mode .record-item { border-color: #2a2a4a; }
+    .dark-mode .record-icon { background: rgba(74,144,226,.2); }
+    .dark-mode .record-time { color: #888; }
+    .dark-mode .record-del { color: #ef5350; }
+    .dark-mode .chart-box { background: #1e1e38; }
+    .dark-mode .toast { background: #444; }
+    .dark-mode #syncDebugSummary { background: #2a2a4a !important; color: #aaa !important; }
+    .dark-mode #syncDebugFull { background: #222240 !important; color: #888 !important; border-top-color: #3a3a5a !important; }
+    .dark-mode .heatmap-day { color: #888; }
+    .dark-mode .heatmap-day.has-data { color: #fff; }
+    .dark-mode .track-bg { background: #2a2a4a; }
+    .dark-mode .lb-tabs button { background: #2a2a4a; border-color: #3a3a5a; color: #999; }
+    .dark-mode .lb-tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .dark-mode .chart-toggle button { background: #2a2a4a; border-color: #3a3a5a; color: #999; }
+    .dark-mode .chart-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .dark-mode #darkAutoBtn { border-color: #7bb3e8 !important; color: #7bb3e8 !important; }
+    .setting-item.disabled { opacity: 0.45; pointer-events: none; }
+    .dark-mode .heatmap-wrap + div button { background: #2a2a4a !important; color: #7bb3e8 !important; }
     .lb-list { display: flex; flex-direction: column; gap: 6px; }
     .lb-item { display: flex; align-items: center; padding: 10px 12px; background: #f8faff; border-radius: 10px; border: 1px solid #eef3fb; cursor: pointer; transition: background .15s; }
     .lb-item:hover { background: #f0f5ff; }
@@ -103,7 +164,8 @@
     .btn-water { flex: 1; min-width: 72px; padding: 9px 0; background: #4A90E2; color: #fff; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
     .btn-water:active { opacity: .7; }
     .btn-water.custom { background: #FF9800; }
-    .btn-water.small { flex: 0 0 auto; padding: 10px 16px; min-width: 60px; }
+    .btn-water.small { flex: 1; min-width: 52px; padding: 10px 4px; font-size: 0.8125rem; }
+    .btn-water.sip { width: 100%; background: #e8f0fe; color: var(--primary); font-size: 0.8125rem; padding: 8px 0; font-weight: 500; border: 1px dashed var(--primary); }
     .mood-row { display: flex; flex-wrap: wrap; gap: 4px; }
     .mood-btn { font-size: 1.25rem; padding: 4px 8px; border: 2px solid transparent; border-radius: 8px; background: #f5f7fa; cursor: pointer; transition: all .2s; line-height: 1; }
     .mood-btn:hover { background: #e8f0fe; transform: scale(1.1); }
@@ -167,7 +229,7 @@
     .heatmap-day .hm-wave .w2 { animation: hmWaveSway 2s ease-in-out infinite alternate-reverse; }
     .plant-pop { animation: plantPop .4s ease-out; }
     @keyframes plantPop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
-    @media (max-width: 374px) { .btn-water.small { min-width: 48px; padding: 8px 10px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
+    @media (max-width: 374px) { .btn-water.small { min-width: 44px; padding: 8px 2px; font-size: 0.75rem; } .cup-container { transform: scale(0.85); } .plant-emoji { font-size: 3rem; } }
   </style>
 </head>
 <body>
@@ -245,6 +307,9 @@
       <button class="btn-water small" onclick="addWater(1000)">1000ml</button>
       <button class="btn-water small custom" onclick="showCustomDialog()">&#x81EA;&#x5B9A;&#x4E49;</button>
     </div>
+    <div class="btn-row">
+      <button class="btn-water sip" onclick="addWater(15)">&#x1F445; &#x559d;&#x4E00;&#x5C0F;&#x53E3; (15ml)</button>
+    </div>
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
@@ -280,6 +345,11 @@
   </div>
   <div class="card">
     <div class="card-title">📅 喝水日历</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <button onclick="prevMonth()" style="border:none;background:var(--bg);border-radius:6px;padding:2px 10px;font-size:1rem;cursor:pointer;color:var(--primary);">◀</button>
+      <span id="heatmapMonthLabel" style="font-size:0.8125rem;font-weight:600;color:var(--text);flex:1;text-align:center;"></span>
+      <button onclick="nextMonth()" style="border:none;background:var(--bg);border-radius:6px;padding:2px 10px;font-size:1rem;cursor:pointer;color:var(--primary);">▶</button>
+    </div>
     <div class="heatmap-wrap" id="heatmapWrap"></div>
   </div>
 </div>
@@ -301,10 +371,17 @@
       <div class="setting-info"><div class="setting-label">喝水提醒</div><div class="setting-desc" id="settingRemindDesc">已关闭</div></div>
       <div class="setting-switch" id="remindSwitch" onclick="toggleReminder()"></div>
     </div>
-    <div class="setting-item" onclick="toggleDarkMode()">
+    <div class="setting-item" onclick="showReminderIntervalDialog()">
+      <span class="setting-icon">⏱</span>
+      <div class="setting-info"><div class="setting-label">提醒周期</div><div class="setting-desc" id="settingIntervalDesc">30 分钟</div></div>
+      <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item">
       <span class="setting-icon">🌙</span>
-      <div class="setting-info"><div class="setting-label">深色模式</div><div class="setting-desc" id="settingDarkDesc">跟随系统</div></div>
-      <div class="setting-switch" id="darkSwitch" style="flex-shrink:0;"></div>
+      <div class="setting-info"><div class="setting-label">深色模式
+        <span id="darkAutoBtn" onclick="setDarkMode('auto')" style="display:inline-block;font-size:0.625rem;color:var(--primary);border:1px solid var(--primary);border-radius:6px;padding:0 6px;margin-left:6px;cursor:pointer;vertical-align:middle;line-height:1.6;">auto</span>
+      </div><div class="setting-desc" id="settingDarkDesc">跟随系统</div></div>
+      <div class="setting-switch" id="darkSwitch" onclick="toggleDarkMode()" style="flex-shrink:0;"></div>
     </div>
     <div class="setting-item" onclick="showAvatarDialog()">
       <span class="setting-icon" id="settingAvatarPreview">🐼</span>
@@ -325,7 +402,7 @@
     </div>
     <div class="setting-item" onclick="showAboutDialog()">
       <span class="setting-icon">ℹ️</span>
-      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc">喝杯水吧 v1.4.1</div></div>
+      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc">喝杯水吧 v1.4.0</div></div>
       <span class="setting-arrow">›</span>
     </div>
   </div>
@@ -346,6 +423,11 @@
       <span class="setting-icon">🔄</span>
       <div class="setting-info"><div class="setting-label" id="syncSettingLabel">立即同步</div><div class="setting-desc" id="syncSettingDesc">手动触发一次双向数据同步</div></div>
       <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item" onclick="disconnectWatch()">
+      <span class="setting-icon">⌚</span>
+      <div class="setting-info"><div class="setting-label" style="color:var(--danger);">断开手表</div><div class="setting-desc" id="watchDisconnectDesc">停止与手表的数据互通</div></div>
+      <span class="setting-arrow" style="color:var(--danger);">›</span>
     </div>
     <div id="syncDebugWrap" style="display:none;margin:6px 0;">
       <div id="syncDebugSummary" style="font-size:0.75rem;color:#666;background:#f8f9fa;border-radius:8px;padding:8px 10px;line-height:1.6;cursor:pointer;" onclick="toggleSyncDebug()"></div>
@@ -417,6 +499,17 @@ var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
 var ANON_USER_KEY = 'drink_water_user_id';
 
 /* ── Supabase 集成（排行榜在线版） ── */
+var WATCH_DISCONNECTED_KEY = 'drink_water_watch_disconnected';
+
+function isWatchDisconnected() {
+  return localStorage.getItem(WATCH_DISCONNECTED_KEY) === '1';
+}
+
+function setWatchDisconnected(val) {
+  if (val) localStorage.setItem(WATCH_DISCONNECTED_KEY, '1');
+  else localStorage.removeItem(WATCH_DISCONNECTED_KEY);
+}
+
 function getAnonUserId() {
   var id = localStorage.getItem(ANON_USER_KEY);
   if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem(ANON_USER_KEY, id); }
@@ -465,6 +558,16 @@ function sbFetch(path, options) {
   });
 }
 
+/* 攒批推送：攒 30 秒内的多次喝水，一次推上去 */
+var _debounceTimer = null;
+function debouncedSync() {
+  if (_debounceTimer) clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(function() {
+    _debounceTimer = null;
+    syncTodayToLeaderboard();
+  }, 30000);
+}
+
 /* 将今日数据同步到 Supabase 排行榜（upsert），先合并云端记录再推送 */
 function syncTodayToLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve();
@@ -476,6 +579,10 @@ function syncTodayToLeaderboard() {
     return { id: r.id, amount: r.amount, time: r.dateTime, mood: r.mood || '' };
   });
   syncDebug('📤 推送 ' + todayRecords.length + ' 条, 总量 ' + total + 'ml, 连续 ' + streak + ' 天');
+  /* 从缓存取本周/本月累计 */
+  ensureCache();
+  var weekMl = _cacheWeek;
+  var monthMl = _cacheMonth;
   syncDebug('📤 推送记录 ID: ' + todayRecords.map(function(r) { return r.id; }).join(', '));
   if (!navigator.onLine) { syncDebug('❌ 推送失败：网络不可用'); return Promise.resolve(); }
   return sbFetch('leaderboard?on_conflict=user_id', {
@@ -486,6 +593,8 @@ function syncTodayToLeaderboard() {
       nickname: me.name,
       avatar_idx: me.idx,
       today_ml: total,
+      week_ml: weekMl,
+      month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
       banned: false,
@@ -505,7 +614,7 @@ function syncTodayToLeaderboard() {
 /* 从 Supabase 获取在线排行榜（最多 20 条） */
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) return Promise.resolve(null);
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,streak,banned&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
     .then(function(resp) {
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
       return resp.json();
@@ -565,6 +674,7 @@ function fetchMyTodayRecordsFromCloud() {
 /* 将云端今日记录合并到本地 records（按 id 去重） */
 function mergeCloudTodayRecords() {
   if (!isSupabaseConfigured()) return Promise.resolve(0);
+  if (isWatchDisconnected()) { syncDebug('⌚ 手表已断开，跳过拉取'); return Promise.resolve(0); }
   return fetchMyTodayRecordsFromCloud().then(function(cloudRecs) {
     if (!cloudRecs || !Array.isArray(cloudRecs) || cloudRecs.length === 0) {
       syncDebug('📥 云端无数据可合并');
@@ -601,11 +711,14 @@ function mergeCloudTodayRecords() {
       if (!cr.id) return;
       if (!localIds[cr.id]) {
         /* 云端有但本地没有 → 追加 */
+        var crDate = new Date(cr.time);
+        var crDateKey = crDate.getFullYear() + '-' + String(crDate.getMonth()+1).padStart(2,'0') + '-' + String(crDate.getDate()).padStart(2,'0');
+        if (crDateKey !== todayKey) return;  /* 只合并今日记录 */
         gState.records.push({
           id: cr.id,
           amount: cr.amount,
           dateTime: cr.time,
-          dateKey: todayKey,
+          dateKey: crDateKey,
           mood: cr.mood || ''
         });
         merged++;
@@ -636,6 +749,8 @@ function generatePairingCode() {
     body: JSON.stringify({ pairing_code: code, user_id: uid, created_at: new Date().toISOString() })
   }).then(function(resp) {
     if (!resp.ok) { console.warn('Pairing code upload failed:', resp.status); showToast('配对码生成失败'); return; }
+    setWatchDisconnected(false);
+    updateSettingsUI();
     showModal('📱 连接手表',
       '<div style="text-align:center;padding:16px 0;">' +
       '<div style="font-size:0.75rem;color:#666;margin-bottom:10px;">在手表版输入以下配对码</div>' +
@@ -703,15 +818,65 @@ function toggleSyncDebug() {
   renderSyncDebug();
 }
 
-/* 强制双向同步：已由自动推送替代，按钮已禁用 */
+/* 强制双向同步：先推本地数据，再拉云端合并 */
 function forceSync() {
-  showToast('\u540c\u6b65\u5df2\u6539\u4e3a\u81ea\u52a8\u63a8\u9001\uff0c\u65e0\u9700\u624b\u52a8\u64cd\u4f5c');
+  if (!isSupabaseConfigured()) { showToast('请先配置 Supabase（排行榜设置）'); return; }
+  syncDebugClear();
+  syncDebug('🔄 开始同步...');
+  syncDebug('用户 ID: ' + getAnonUserId().substring(0, 8) + '...');
+
+  var todayKey = getDateKey(new Date());
+  var phoneLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
+  var phoneMl = phoneLocal.reduce(function(s, r) { return s + r.amount; }, 0);
+  syncDebug('📱 手机本地: ' + phoneLocal.length + ' 条, ' + phoneMl + 'ml');
+
+  if (isWatchDisconnected()) {
+    syncDebug('⌚ 手表已断开，仅推送排行榜（不拉取合并）');
+    syncTodayToLeaderboard().then(function() {
+      syncDebug('✅ 同步完成（手表断开模式）');
+      showToast('已推送排行榜，手表数据未拉取');
+    });
+    return;
+  }
+
+  /* 与手表版一致的流程：先推 → 再拉合并 */
+  syncDebug('📤 推送本地数据到云端...');
+  syncTodayToLeaderboard().then(function() {
+    syncDebug('📥 拉取云端记录合并到本地...');
+    return mergeCloudTodayRecords();
+  }).then(function(merged) {
+    var afterLocal = gState.records.filter(function(r) { return r.dateKey === todayKey; });
+    var afterMl = afterLocal.reduce(function(s, r) { return s + r.amount; }, 0);
+    syncDebug('✅ 同步完成');
+    syncDebug('📱 手机本地现在: ' + afterLocal.length + ' 条, ' + afterMl + 'ml');
+    if (merged > 0) {
+      syncDebug('⌚ 本次合并了 ' + merged + ' 条手表记录 ✅');
+    } else {
+      /* 再查一次云端，判断是不是没有手表数据 */
+      fetchMyTodayRecordsFromCloud().then(function(recs) {
+        var cc = recs && Array.isArray(recs) ? recs.length : 0;
+        syncDebug('☁️ 云端现有 ' + cc + ' 条记录');
+        if (cc === afterLocal.length) {
+          syncDebug('⌚ 未检测到手表的记录 ❌');
+        } else {
+          syncDebug('⌚ 云端比本地多 ' + (cc - afterLocal.length) + ' 条');
+        }
+      });
+    }
+    refreshUI();
+    showToast('同步完成');
+  }).catch(function(e) {
+    var msg = e && e.message ? e.message : '未知错误';
+    if (e && e.toString) msg = e.toString();
+    syncDebug('❌ 同步失败: ' + msg);
+    showToast('同步失败，请检查网络');
+  });
 }
 
 /* ── 结束 Supabase 集成 ── */
 
 function getDefaultSettings() {
-  return { dailyGoal: 2000, customAmount: 250, enableReminder: false };
+  return { dailyGoal: 2000, customAmount: 250, enableReminder: false, reminderInterval: 30 };
 }
 
 function loadSettings() {
@@ -791,12 +956,16 @@ var PLANT_STAGES = [
 function calcStreak(records, dailyGoal) {
   var today = new Date();
   var streak = 0;
+  /* 先把记录按日期聚合成总量映射表，避免循环里反复遍历 */
+  var dayMap = {};
+  for (var i = 0; i < records.length; i++) {
+    dayMap[records[i].dateKey] = (dayMap[records[i].dateKey] || 0) + records[i].amount;
+  }
   for (var i = 0; ; i++) {
     var d = new Date(today);
     d.setDate(d.getDate() - i);
     var key = getDateKey(d);
-    var dayTotal = records.filter(function(r) { return r.dateKey === key; }).reduce(function(s, r) { return s + r.amount; }, 0);
-    if (dayTotal >= dailyGoal) { streak++; } else { break; }
+    if ((dayMap[key] || 0) >= dailyGoal) { streak++; } else { break; }
   }
   return streak;
 }
@@ -876,12 +1045,14 @@ function renderCupAndTrack(total, goal) {
 }
 
 function fireConfetti() {
+  if (window._confettiBusy) return;
+  window._confettiBusy = true;
   var container = document.createElement('div');
   container.className = 'confetti-container';
   document.body.appendChild(container);
   var colors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#e91e63','#ff6b6b','#ffd93d'];
   var shapes = ['\u25A0','\u25CF','\u25B2','\u2605','\u2666','\u2665'];
-  for (var i = 0; i < 80; i++) {
+  for (var i = 0; i < 40; i++) {
     var piece = document.createElement('div');
     piece.className = 'confetti-piece';
     piece.textContent = shapes[Math.floor(Math.random() * shapes.length)];
@@ -892,7 +1063,10 @@ function fireConfetti() {
     piece.style.animationDelay = Math.random() * 0.8 + 's';
     container.appendChild(piece);
   }
-  setTimeout(function() { if (container.parentNode) { container.parentNode.removeChild(container); } }, 4000);
+  setTimeout(function() {
+    if (container.parentNode) container.parentNode.removeChild(container);
+    window._confettiBusy = false;
+  }, 4000);
 }
 
 function renderRecords(todayRecords) {
@@ -1040,6 +1214,37 @@ function triggerOverflow(intensity) {
 }
 var gState = { records: [], settings: getDefaultSettings(), chartWeek: true, chartInstance: null, todayExcessCount: 0, lastExcessDateKey: '' };
 var _selectedMood = '';
+/* 今日/本周/本月累计值缓存 */
+var _cacheDateKey = '';
+var _cacheToday = 0, _cacheWeek = 0, _cacheMonth = 0;
+function ensureCache() {
+  var today = getDateKey(new Date());
+  if (_cacheDateKey !== today) {
+    _cacheToday = getTodayTotal(gState.records);
+    var wk = getWeekStats(gState.records);
+    _cacheWeek = 0; for (var w in wk) _cacheWeek += wk[w];
+    var mo = getMonthStats(gState.records);
+    _cacheMonth = 0; for (var m in mo) _cacheMonth += mo[m];
+    _cacheDateKey = today;
+  }
+}
+function updateCacheOnAdd(amount) {
+  ensureCache();
+  _cacheToday += amount;
+  var now = new Date();
+  var day = now.getDay();
+  var monday = new Date(now); monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  if (getDateKey(now) >= getDateKey(monday)) _cacheWeek += amount;
+  var monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  if (getDateKey(now).substring(0,7) === monthKey) _cacheMonth += amount;
+}
+function updateCacheOnDelete(record) {
+  if (!record || !record.dateKey) return;
+  if (record.dateKey !== getDateKey(new Date())) { _cacheDateKey = ''; return; }
+  _cacheToday -= record.amount;
+  _cacheWeek -= record.amount;
+  _cacheMonth -= record.amount;
+}
 var _editingRecordId = null;
 var _recordsExpanded = false;
 
@@ -1106,9 +1311,12 @@ function exportData() {
   };
   var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
-  URL.revokeObjectURL(url);
+  try {
+    var a = document.createElement('a');
+    a.href = url; a.download = 'drink_water_backup_' + getDateKey(new Date()) + '.json'; a.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
   showToast('\u6570\u636e\u5df2\u5bfc\u51fa');
 }
 
@@ -1153,7 +1361,60 @@ function showEffectsGuide() {
 
 function showAboutDialog() {
   var uid = localStorage.getItem('drink_water_user_id') || '\u672a\u751f\u6210';
-  showModal('\u5173\u4e8e\u5e94\u7528', '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;"><div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div><b>\u559d\u6c34\u8bb0\u5f55 v1.0</b><br>\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef<br><br><span style="font-size:0.625rem;color:#999;word-break:break-all;">ID: ' + uid + '</span></div>', [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]);
+  showModal('\u5173\u4e8e\u5e94\u7528',
+    '<div style="font-size:0.8125rem;line-height:1.8;text-align:center;">' +
+    '<div style="font-size:3rem;margin-bottom:10px;">\u{1F4A7}</div>' +
+    '<b>\u559d\u6c34\u8bb0\u5f55</b><br>' +
+    '\u5e2e\u52a9\u60a8\u517b\u6210\u5065\u5eb7\u7684\u996e\u6c34\u4e60\u60ef' +
+    '<br><br>' +
+    '<span style="font-size:0.625rem;color:#999;word-break:break-all;">ID: ' + uid + '</span>' +
+    '<div id="aboutChangelog" style="max-height:320px;overflow-y:auto;border-top:1px solid var(--border);margin-top:12px;padding-top:10px;font-size:0.75rem;line-height:1.7;text-align:left;"><div style="text-align:center;color:#999;padding:10px;">\u52a0\u8f7d\u4e2d...</div></div>' +
+    '</div>',
+    [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
+  );
+  /* 尝试从服务器加载 CHANGELOG.md，失败则用本地硬编码版本 */
+  fetch('CHANGELOG.md').then(function(resp) {
+    if (!resp.ok) throw new Error();
+    return resp.text();
+  }).then(function(md) {
+    renderChangelog(md);
+  }).catch(function() {
+    /* 本地打开时 fetch 被禁止，使用内联版本 */
+    renderChangelog(null);
+  });
+}
+
+function renderChangelog(md) {
+  var html = '<div style="font-weight:600;color:var(--text);margin-bottom:6px;">\u66f4\u65b0\u65e5\u5fd7</div>';
+  if (md) {
+    var lines = md.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.indexOf('## ') === 0) {
+        html += '<div style="margin:8px 0 4px;font-weight:600;color:var(--primary);">' + line.replace('## ', '') + '</div>';
+      } else if (line.indexOf('### ') === 0) {
+        html += '<div style="color:#888;font-size:0.6875rem;margin:4px 0 2px;">' + line.replace('### ', '\u276f ') + '</div>';
+      } else if (line.indexOf('- **') === 0) {
+        html += '<div style="padding-left:10px;">' + line.replace(/^- \*\*(.+?)\*\*(.*)$/, '<b>$1</b>$2') + '</div>';
+      } else if (line.indexOf('- ') === 0) {
+        html += '<div style="padding-left:10px;">' + line + '</div>';
+      }
+    }
+  } else {
+    /* 本地模式：简短内联版本 */
+    html +=
+      '<div style="margin:6px 0 3px;font-weight:600;color:var(--primary);">v1.4.0 — \u65e5\u5386\u4ea4\u4e92 + \u6df1\u8272\u6a21\u5f0f + \u6392\u884c\u699c\u5468\u671f</div>' +
+      '<div style="padding-left:10px;">\u2022 \u65e5\u5386\u65e5\u671f\u53ef\u70b9\u3001\u7ffb\u6708</div>' +
+      '<div style="padding-left:10px;">\u2022 15ml \u5c0f\u53e3\u6309\u94ae</div>' +
+      '<div style="padding-left:10px;">\u2022 \u6392\u884c\u699c\u672c\u5468/\u672c\u6708</div>' +
+      '<div style="padding-left:10px;">\u2022 \u6df1\u8272\u6a21\u5f0f\u5b8c\u6574\u914d\u8272</div>' +
+      '<div style="padding-left:10px;">\u2022 \u63d0\u9192\u5468\u671f\u53ef\u8c03</div>' +
+      '<div style="padding-left:10px;">\u2022 \u79ef\u7d2f\u503c\u7f13\u5b58\u3001\u652c\u6279\u63a8\u9001</div>' +
+      '<div style="margin:6px 0 3px;font-weight:600;color:var(--primary);">v1.3.0 — \u96f6\u5916\u90e8\u4f9d\u8d56</div>' +
+      '<div style="padding-left:10px;">\u2022 \u79fb\u9664 CDN \uff0c\u4fee\u590d Safari \u6253\u4e0d\u5f00</div>';
+  }
+  var el = document.getElementById('aboutChangelog');
+  if (el) el.innerHTML = html;
 }
 
 /* ── Supabase 配置对话框 ── */
@@ -1207,8 +1468,14 @@ function loadAll() {
   gState.records = loadRecords();
   applyDarkMode(localStorage.getItem('dark_mode') || 'auto');
   var saved = loadSettings();
-  if (saved.enableReminder && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-    if (typeof startReminder === 'function') { startReminder(); }
+  if (saved.enableReminder && typeof Notification !== 'undefined') {
+    if (Notification.permission === 'granted') {
+      if (typeof startReminder === 'function') { startReminder(); }
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then(function(p) {
+        if (p === 'granted' && typeof startReminder === 'function') { startReminder(); }
+      });
+    }
   }
   var todayKey = getDateKey(new Date());
   if (gState.lastExcessDateKey !== todayKey) { gState.todayExcessCount = 0; gState.lastExcessDateKey = todayKey; }
@@ -1243,7 +1510,7 @@ function addWater(amount) {
     mood: _selectedMood || ''
   });
   saveRecords(gState.records);
-  syncTodayToLeaderboard(); /* 同步到在线排行榜 */
+  debouncedSync(); /* 同步到在线排行榜 */
   if (wasAlreadyAtGoal) { gState.todayExcessCount++; gState.lastExcessDateKey = todayKey; triggerExcessEffect(gState.todayExcessCount); }
   refreshUI();
   /* 重置情绪选择 */
@@ -1253,8 +1520,13 @@ function addWater(amount) {
 }
 
 function deleteRecord(id) {
+  var deleted = null;
+  for (var _i = 0; _i < gState.records.length; _i++) {
+    if (gState.records[_i].id === id) { deleted = gState.records[_i]; break; }
+  }
   gState.records = gState.records.filter(function(r) { return r.id !== id; });
   saveRecords(gState.records);
+  updateCacheOnDelete(deleted);
   var afterCount = gState.records.length;
   syncDebug('🗑️ 删除记录，本地剩余 ' + afterCount + ' 条');
   syncTodayToLeaderboard().then(function() {
@@ -1435,15 +1707,33 @@ function updateSettingsUI() {
   document.getElementById('settingNickname').textContent = localStorage.getItem('lb_nickname') || '\u672a\u8bbe\u7f6e';
   var sbDesc = document.getElementById('settingSupabaseDesc');
   if (sbDesc) { sbDesc.textContent = isSupabaseConfigured() ? '\u2705 \u5df2\u8fde\u63a5' : '\u26a0\ufe0f \u672a\u914d\u7f6e'; }
-  /* 同步按钮变灰（永久禁用，改为自动推送） */
+  var intervalDesc = document.getElementById('settingIntervalDesc');
+  if (intervalDesc) { intervalDesc.textContent = '每 ' + (s.reminderInterval || 30) + ' \u5206\u949f'; }
+  /* 断开手表按钮状态 */
+  var disconnected = isWatchDisconnected();
+  var watchDesc = document.getElementById('watchDisconnectDesc');
+  if (watchDesc) { watchDesc.textContent = disconnected ? '已断开' : '停止与手表的数据互通'; }
+  /* 同步按钮变灰 */
   var syncItem = document.getElementById('syncSettingItem');
   var syncLabel = document.getElementById('syncSettingLabel');
   var syncDesc = document.getElementById('syncSettingDesc');
   if (syncItem && syncLabel && syncDesc) {
-    syncItem.className = 'setting-item disabled';
-    syncLabel.textContent = '\u81ea\u52a8\u540c\u6b65';
-    syncDesc.textContent = '\u8fde\u7f51\u540e\u81ea\u52a8\u63a8\u9001\u559d\u6c34\u6570\u636e';
+    syncItem.className = 'setting-item' + (disconnected ? ' disabled' : '');
+    syncLabel.textContent = disconnected ? '仅推送排行榜' : '立即同步';
+    syncDesc.textContent = disconnected ? '手表已断开，不拉取云端记录' : '手动触发一次双向数据同步';
   }
+}
+
+/* 断开手表 */
+function disconnectWatch() {
+  showModal('断开手表', '断开后手机将不再拉取云端数据，仅推送排行榜。<br><br>点击「连接手表」可恢复同步。',
+    [{ text: '取消', cls: 'btn-cancel', action: hideModal },
+     { text: '断开手表', cls: 'btn-danger', action: function() {
+      setWatchDisconnected(true);
+      hideModal();
+      updateSettingsUI();
+      showToast('已断开手表，同步已暂停');
+    }}]);
 }
 
 /* 断开排行榜：清除 Supabase 配置与用户身份，恢复本地模式 */
@@ -1452,6 +1742,7 @@ function disconnectLeaderboard() {
     [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
      { text: '\u786e\u8ba4\u65ad\u5f00', cls: 'btn-danger', action: function() {
       localStorage.removeItem(SUPABASE_CONFIG_KEY);
+      _sbClient = null;
       localStorage.removeItem(ANON_USER_KEY);
       hideModal();
       updateSettingsUI();
@@ -1496,28 +1787,56 @@ function toggleReminder() {
 
 function startReminder() {
   if (window._reminderInterval) { clearInterval(window._reminderInterval); }
+  var intervalMin = gState.settings.reminderInterval || 30;
   var notify = function() {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification('\u559d\u6c34\u63d0\u9192', { body: '\u8be5\u559d\u6c34\u5566\uff01\u4fdd\u6301\u6c34\u5206\u6444\u5165\uff0c\u8ba9\u8eab\u4f53\u66f4\u5065\u5eb7\uff5e' });
     }
   };
   notify();
-  window._reminderInterval = setInterval(notify, 60 * 60 * 1000);
+  window._reminderInterval = setInterval(notify, intervalMin * 60 * 1000);
 }
 
 function stopReminder() {
   if (window._reminderInterval) { clearInterval(window._reminderInterval); window._reminderInterval = null; }
 }
 
-function toggleDarkMode() {
-  var current = localStorage.getItem('dark_mode') || 'auto';
-  var modes = ['auto', 'on', 'off'];
-  var next = modes[(modes.indexOf(current) + 1) % modes.length];
-  localStorage.setItem('dark_mode', next);
-  applyDarkMode(next);
+/* 提醒周期设置弹窗 */
+function showReminderIntervalDialog() {
+  var curr = gState.settings.reminderInterval || 30;
+  showModal('提醒周期',
+    '<input type="number" id="reminderIntervalInput" value="' + curr + '" placeholder="分钟" min="1" max="60" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:6px;">范围：1-60 分钟</div>',
+    [{ text: '取消', cls: 'btn-cancel', action: hideModal },
+     { text: '保存', cls: 'btn-confirm', action: function() {
+      var val = parseInt(document.getElementById('reminderIntervalInput').value);
+      if (!val || val < 1) { showToast('请输入有效分钟数'); return; }
+      if (val > 60) val = 60;
+      gState.settings.reminderInterval = val;
+      saveSettings(gState.settings);
+      updateSettingsUI();
+      if (gState.settings.enableReminder) {
+        stopReminder();
+        startReminder();
+      }
+      hideModal();
+      showToast('提醒周期已更新');
+    }}]
+  );
+  setTimeout(function() { var e = document.getElementById('reminderIntervalInput'); if (e) e.focus(); }, 100);
+}
+
+function setDarkMode(mode) {
+  localStorage.setItem('dark_mode', mode);
+  applyDarkMode(mode);
   updateSettingsUI();
   var labels = { on: '\u6df1\u8272\u6a21\u5f0f\u5df2\u5f00\u542f', off: '\u6df1\u8272\u6a21\u5f0f\u5df2\u5173\u95ed', auto: '\u5df2\u5207\u6362\u4e3a\u8ddf\u968f\u7cfb\u7edf' };
-  showToast(labels[next]);
+  showToast(labels[mode]);
+}
+
+function toggleDarkMode() {
+  var current = localStorage.getItem('dark_mode') || 'auto';
+  var next = current === 'on' ? 'off' : 'on';
+  setDarkMode(next);
 }
 
 function applyDarkMode(mode) {
@@ -1603,7 +1922,7 @@ function switchTab(idx) {
   if (msgEl) { msgEl.style.display = (idx === 0) ? '' : 'none'; }
   document.querySelectorAll('.bottom-nav button').forEach(function(b, i) { b.classList.toggle('active', i === idx); });
   if (idx === 2) { renderLeaderboard(); }
-  if (idx === 3) { createChart(); renderHeatmap(); }
+  if (idx === 3) { _heatmapYear = null; _heatmapMonth = null; createChart(); renderHeatmap(); }
   if (idx === 1) { renderGarden(gState.records, gState.settings); }
 }
 
@@ -1640,13 +1959,19 @@ function renderLeaderboard() {
 
 function renderLeaderboardContent() {
   var me = getMyAnimal();
-  var myTotal = getTodayTotal(gState.records);
+  /* 从缓存取三个周期的累计值 */
+  ensureCache();
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
   var myTodayRecs = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; });
-  var myEntry = { emoji: me.emoji, name: me.name, todayMl: myTotal, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+  var myEntry = { emoji: me.emoji, name: me.name, todayMl: _cacheToday, weekMl: _cacheWeek, monthMl: _cacheMonth, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+
+  /* 根据当前选项卡决定用哪个字段排序和展示 */
+  function getPeriodMl(u) {
+    return lbPeriod === 'today' ? (u.todayMl || 0) : lbPeriod === 'week' ? (u.weekMl || 0) : (u.monthMl || 0);
+  }
 
   function renderList(allUsers) {
-    allUsers.sort(function(a, b) { return b.todayMl - a.todayMl; });
+    allUsers.sort(function(a, b) { return getPeriodMl(b) - getPeriodMl(a); });
     allUsers = allUsers.slice(0, 20);
     var html = '';
     allUsers.forEach(function(u, i) {
@@ -1655,8 +1980,9 @@ function renderLeaderboardContent() {
       var meTag = u.isMe ? '<span class="lb-me-tag">\u4f60</span>' : '';
       /* 不再内嵌 today_records，改为存 user_id，点击时按需拉取 */
       var uid = u.isMe ? '' : (u.user_id || '');
-      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" onclick="event.stopPropagation();deleteUserRanking(\'' + uid + '\',\'' + u.name.replace(/'/g, "\\'") + '\')" title="删除此用户排名">✕</span>' : '';
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + u.todayMl + ' <span class="lb-unit">ml</span></div></div>';
+      var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" data-deluid="' + uid + '" data-delnick="' + u.name.replace(/"/g, '&quot;') + '" title="删除此用户排名">✕</span>' : '';
+      var periodMl = getPeriodMl(u);
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + periodMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
   }
@@ -1676,6 +2002,8 @@ function renderLeaderboardContent() {
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
             todayMl: u.today_ml || 0,
+            weekMl: u.week_ml || 0,
+            monthMl: u.month_ml || 0,
             streak: u.streak || 0,
             todayRecords: [],  /* 列表页不拉明细 */
             isMe: isMe
@@ -1695,8 +2023,7 @@ function renderLeaderboardContent() {
     renderList(myEntry.todayMl > 0 ? [myEntry] : []);
   }
 
-  if (lbInterval) { clearInterval(lbInterval); }
-  lbInterval = setInterval(function() { if (document.getElementById('page-leaderboard').classList.contains('active')) { renderLeaderboard(); } }, 10000);
+  if (lbInterval) { clearInterval(lbInterval); lbInterval = null; }
 }
 
 var _lastRefreshTime = 0;
@@ -1911,23 +2238,28 @@ function switchLB(period) {
   document.querySelectorAll('#lbTabs button').forEach(function(b) { b.classList.toggle('active', b.textContent.trim() === (period === 'today' ? '\u4eca\u65e5' : period === 'week' ? '\u672c\u5468' : '\u672c\u6708')); });
   renderLeaderboard();
 }
+var _heatmapYear = null;
+var _heatmapMonth = null;
+
 function renderHeatmap() {
   var wrap = document.getElementById('heatmapWrap');
   if (!wrap) return;
   var records = gState.records;
   var goal = gState.settings.dailyGoal;
   var now = new Date();
-  var year = now.getFullYear();
-  var month = now.getMonth();
+  if (_heatmapYear === null) _heatmapYear = now.getFullYear();
+  if (_heatmapMonth === null) _heatmapMonth = now.getMonth();
+  var year = _heatmapYear;
+  var month = _heatmapMonth;
   var days = new Date(year, month + 1, 0).getDate();
   var firstDay = new Date(year, month, 1).getDay();
   var totalByDay = {};
   records.forEach(function(r) { if (r.dateKey) { totalByDay[r.dateKey] = (totalByDay[r.dateKey] || 0) + r.amount; } });
-  var html = '<div class="heatmap-month">' + year + '.' + String(month+1).padStart(2,'0') + '</div><div class="heatmap-grid">';
+  var html = '<div class="heatmap-grid">';
   var weekdays = ['\u65e5','\u4e00','\u4e8c','\u4e09','\u56db','\u4e94','\u516d'];
   for (var w = 0; w < 7; w++) { html += '<div class="heatmap-day" style="font-size:0.5625rem;color:#bbb;">' + weekdays[w] + '</div>'; }
   for (var i = 0; i < firstDay; i++) { html += '<div class="heatmap-day"></div>'; }
-  var todayKey = year + '-' + String(month+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  var todayKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   for (var d = 1; d <= days; d++) {
     var key = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     var amt = totalByDay[key] || 0;
@@ -1935,7 +2267,7 @@ function renderHeatmap() {
     var isToday = (key === todayKey);
     var hasWater = (amt > 0);
     var cls = 'heatmap-day' + (hasWater ? ' has-data' : '') + (isToday ? ' today' : '');
-    html += '<div class="' + cls + '" style="position:relative;">';
+    html += '<div class="' + cls + '" style="position:relative;cursor:pointer;" onclick="showDayRecords(\'' + key + '\')">';
     if (hasWater) {
       html += '<div class="hm-water-wrap"><div class="hm-water-fill" style="height:' + fillPct + '%">';
       html += '<div class="hm-wave"><svg viewBox="0 0 30 6" preserveAspectRatio="none">';
@@ -1945,7 +2277,48 @@ function renderHeatmap() {
     html += '<div class="hm-date">' + d + (hasWater ? '<div class="hm-tip">' + key + ' ' + amt + 'ml</div>' : '') + '</div></div>';
   }
   html += '</div>';
+  var labelEl = document.getElementById('heatmapMonthLabel');
+  if (labelEl) labelEl.textContent = year + '.' + String(month+1).padStart(2,'0');
   wrap.innerHTML = html;
+}
+
+/* 日历翻月 */
+function prevMonth() {
+  _heatmapMonth--;
+  if (_heatmapMonth < 0) { _heatmapMonth = 11; _heatmapYear--; }
+  renderHeatmap();
+}
+function nextMonth() {
+  _heatmapMonth++;
+  if (_heatmapMonth > 11) { _heatmapMonth = 0; _heatmapYear++; }
+  renderHeatmap();
+}
+
+/* 点击日历日期，显示当天的喝水记录 */
+function showDayRecords(dateKey) {
+  var dayRecords = gState.records.filter(function(r) { return r.dateKey === dateKey; });
+  var total = 0;
+  var listHtml = '';
+  for (var i = 0; i < dayRecords.length; i++) {
+    var r = dayRecords[i];
+    total += r.amount;
+    var t = new Date(r.dateTime);
+    var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    var mood = r.mood || '';
+    listHtml += '<div style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light);">' +
+      '<span style="font-size:1.125rem;margin-right:8px;">\u{1F4A7}</span>' +
+      '<div style="flex:1;"><span style="font-weight:600;">' + r.amount + ' ml</span>' +
+      (mood ? ' <span style="font-size:0.875rem;">' + mood + '</span>' : '') +
+      '<div style="font-size:0.6875rem;color:var(--text-secondary);margin-top:1px;">' + timeStr + '</div></div></div>';
+  }
+  var listContent = listHtml || '<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:0.8125rem;">这天没有喝水记录</div>';
+  var content = '<div style="max-height:50vh;overflow-y:auto;">' + listContent + '</div>';
+  if (total > 0) {
+    content += '<div style="text-align:right;font-size:0.8125rem;color:#666;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;">合计：<span style="font-weight:700;color:var(--primary);">' + total + ' ml</span></div>';
+  }
+  var parts = dateKey.split('-');
+  var title = parts[0] + '.' + parts[1] + '.' + parts[2];
+  showModal('\uD83D\uDCC5 ' + title, content, [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]);
 }
 
 loadAll();

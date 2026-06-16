@@ -2447,11 +2447,6 @@ loadAll();
 window.addEventListener('online', function() {
   if (isSupabaseConfigured()) debouncedSync();
 });
-/* 注册 Service Worker（网络优先，离线回退；改 SW_DEPLOY 值触发更新） */
-var SW_DEPLOY = '20260615';
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=' + SW_DEPLOY).catch(function() {});
-}
 </script>
 <script>
 if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { applyDarkMode(localStorage.getItem('dark_mode') || 'auto'); }); }

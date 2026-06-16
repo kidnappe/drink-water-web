@@ -309,7 +309,7 @@
       <button class="btn-water small custom" onclick="showCustomDialog()">&#x81EA;&#x5B9A;&#x4E49;</button>
     </div>
     <div class="btn-row">
-      <button class="btn-water sip" onclick="addWater(15)">&#x1F445; &#x559d;&#x4E00;&#x5C0F;&#x53E3; (15ml)</button>
+      <button class="btn-water sip" onclick="addWater(gState.settings.sipAmount || 15)">&#x1F445; &#x559d;&#x4E00;&#x5C0F;&#x53E3; (<span id="sipLabel">15</span>ml)</button>
     </div>
   </div>
   <div class="card">
@@ -472,7 +472,11 @@
     </div>
     <div class="lb-list" id="lbList"><div class="lb-empty">加载中...</div></div>
   </div>
-  <div class="lb-footer">⭐ 喝水越多排名越高<br>连续达标天数相同时按总水量排序</div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 16px 4px;">
+    <span onclick="showLBHelp()" style="cursor:pointer;font-size:0.75rem;color:var(--primary);border:1px solid var(--primary);border-radius:12px;padding:4px 14px;">📖 排行榜说明</span>
+    <span onclick="toggleLBDebug()" style="cursor:pointer;font-size:0.75rem;color:#999;border:1px solid #ddd;border-radius:12px;padding:4px 14px;">📋 网络日志</span>
+  </div>
+  <div onclick="showLBRules()" style="cursor:pointer;text-align:center;padding:8px 16px 16px;font-size:0.75rem;color:#aaa;">⭐ 喝水越多排名越高<br>连续达标天数相同时按总水量排序</div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -614,11 +618,16 @@ function syncTodayToLeaderboard() {
 
 /* 从 Supabase 获取在线排行榜（最多 20 条） */
 function fetchOnlineLeaderboard() {
-  if (!isSupabaseConfigured()) return Promise.resolve(null);
+  if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
+  lbDebug('📤 GET 排行榜数据...');
   return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
     .then(function(resp) {
+      lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
-      return resp.json();
+      return resp.json().then(function(data) {
+        lbDebug('📊 返回 ' + (data ? data.length : 0) + ' 条记录');
+        return data;
+      });
     });
 }
 
@@ -877,7 +886,7 @@ function forceSync() {
 /* ── 结束 Supabase 集成 ── */
 
 function getDefaultSettings() {
-  return { dailyGoal: 2000, customAmount: 250, enableReminder: false, reminderInterval: 30 };
+  return { dailyGoal: 2000, customAmount: 250, enableReminder: false, reminderInterval: 30, sipAmount: 15 };
 }
 
 function loadSettings() {
@@ -1103,16 +1112,17 @@ function renderRecords(todayRecords) {
     var timeStr = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     var div = document.createElement('div');
     div.className = 'record-item';
-    /* 心情显示在水量前面，有心情时可点击编辑 */
     var isEditing = (_editingRecordId === r.id);
     var moodHtml = r.mood
       ? '<span class="record-mood-set' + (isEditing ? ' editing' : '') + '" onclick="startEditMood(\'' + r.id + '\')" title="点击更换心情">' + r.mood + '</span>'
       : '';
-    /* 无心情的记录永远显示加号 */
     var addBtn = !r.mood
       ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="标注心情">➕</span>'
       : '';
-    div.innerHTML = formatRecordLine(r) + '<button class="record-del" onclick="deleteRecord(\'' + r.id + '\')" style="flex-shrink:0;margin-left:8px;border:none;background:none;color:#e74c3c;font-size:1.125rem;cursor:pointer;padding:4px;">\u2715</button>';
+    div.innerHTML = '<span style="font-size:1.25rem;margin-right:10px;">\u{1F4A7}</span>' +
+      '<div style="flex:1;min-width:0;"><span style="font-weight:600;">' + moodHtml + r.amount + ' ml' + addBtn + '</span>' +
+      '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + dateStr + ' ' + timeStr + '</div></div>' +
+      '<button class="record-del" onclick="deleteRecord(\'' + r.id + '\')" style="flex-shrink:0;margin-left:8px;border:none;background:none;color:#e74c3c;font-size:1.125rem;cursor:pointer;padding:4px;">\u2715</button>';
     list.appendChild(div);
   });
   /* 展开/收起按钮 */
@@ -1296,7 +1306,7 @@ function showMoodHelp() {
     '<b>\u2795 \u7ed9\u5df2\u6709\u7684\u8bb0\u5f55\u8865\u5fc3\u60c5</b><br>' +
     '\u2460 \u5148\u70b9\u4e00\u4e2a\u5fc3\u60c5\u8868\u60c5<br>' +
     '\u2461 \u518d\u70b9\u8bb0\u5f55\u4e0a\u7684 \u2795 \u56fe\u6807<br><br>' +
-    '<b>\U0001F504 \u66f4\u6362\u5fc3\u60c5</b><br>' +
+    '<b>\u{1F504} \u66f4\u6362\u5fc3\u60c5</b><br>' +
     '\u2460 \u70b9\u4e00\u4e0b\u8bb0\u5f55\u4e0a\u7684\u65e7\u5fc3\u60c5\uff08\u53d8\u9ec4\u9ad8\u4eae\uff09<br>' +
     '\u2461 \u518d\u70b9\u4e00\u4e2a\u65b0\u7684\u5fc3\u60c5\u8868\u60c5 \u2192 \u81ea\u52a8\u66f4\u6362</div>',
     [{ text: '\u77e5\u9053\u4e86', cls: 'btn-confirm', action: hideModal }]
@@ -1595,7 +1605,7 @@ function createChart() {
   canvas.height = 200;
   var ctx = canvas.getContext('2d');
   var w = canvas.width, h = canvas.height;
-  var pad = { top: 16, bottom: 24, left: 36, right: 10 };
+  var pad = { top: 16, bottom: 28, left: 36, right: 10 };
   var chartW = w - pad.left - pad.right;
   var chartH = h - pad.top - pad.bottom;
 
@@ -1656,16 +1666,15 @@ function createChart() {
     ctx.stroke();
   }
 
-  /* X 轴标签 — 太多时跳着显示 */
-  var labelStep = barCount > 14 ? Math.ceil(barCount / 10) : 1;
+  /* X 轴标签 — 按周间隔显示 */
+  var labelStep = barCount > 20 ? Math.max(1, Math.floor(barCount / 7)) : barCount > 14 ? 2 : 1;
   ctx.fillStyle = '#999';
   ctx.font = '9px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   for (var k = 0; k < barCount; k += labelStep) {
     var lx = pad.left + k * barTotal + barW / 2;
-    ctx.fillText(labels[k], 0, 0);
-    ctx.restore();
+    ctx.fillText(labels[k], lx, pad.top + chartH + 4);
   }
 
   /* 目标线 */
@@ -1710,6 +1719,8 @@ function updateSettingsUI() {
   var s = gState.settings;
   document.getElementById('settingGoal').textContent = s.dailyGoal + ' ml';
   document.getElementById('settingCustom').textContent = s.customAmount + ' ml';
+  var sipLabel = document.getElementById('sipLabel');
+  if (sipLabel) sipLabel.textContent = s.sipAmount || 15;
   document.getElementById('remindSwitch').className = 'setting-switch' + (s.enableReminder ? ' on' : '');
   document.getElementById('settingRemindDesc').textContent = s.enableReminder ? '\u5df2\u5f00\u542f' : '\u5df2\u5173\u95ed';
   var darkMode = localStorage.getItem('dark_mode') || 'auto';
@@ -1779,12 +1790,24 @@ function showGoalDialog() {
 
 function showCustomAmountDialog() {
   showModal('\u8bbe\u7f6e\u81ea\u5b9a\u4e49\u6c34\u91cf',
-    '<input type="number" id="customSettingInput" value="' + gState.settings.customAmount + '" placeholder="\u6c34\u91cf\uff08\u6beb\u5347\uff09" min="1" max="2000" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:-8px;margin-bottom:6px;">\u8303\u56f4\uff1a1-2000ml</div>',
+    '<div style="font-size:0.875rem;font-weight:600;color:#666;margin-bottom:6px;">\u6b63\u5e38\u6c34\u91cf</div>' +
+    '<input type="number" id="customSettingInput" value="' + gState.settings.customAmount + '" placeholder="\u6beb\u5347" min="1" max="2000" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:-8px;margin-bottom:12px;">\u8303\u56f4\uff1a1-2000ml</div>' +
+    '<div style="font-size:0.875rem;font-weight:600;color:#666;margin-bottom:6px;">\u559d\u4e00\u5c0f\u53e3</div>' +
+    '<input type="number" id="sipSettingInput" value="' + (gState.settings.sipAmount || 15) + '" placeholder="\u6beb\u5347" min="1" max="50" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9375rem;"><div style="font-size:0.75rem;color:#999;margin-top:-8px;margin-bottom:6px;">\u8303\u56f4\uff1a1-50ml</div>',
     [{ text: '\u53d6\u6d88', cls: 'btn-cancel', action: hideModal },
      { text: '\u4fdd\u5b58', cls: 'btn-confirm', action: function() {
        var val = parseInt(document.getElementById('customSettingInput').value);
-       if (val && val > 0 && val <= 2000) { gState.settings.customAmount = val; saveSettings(gState.settings); hideModal(); updateSettingsUI(); showToast('\u81ea\u5b9a\u4e49\u6c34\u91cf\u5df2\u8bbe\u4e3a ' + val + ' ml'); }
-       else { showToast('\u8bf7\u8f93\u5165\u6709\u6548\u6c34\u91cf\uff081-2000ml\uff09'); }
+       var sip = parseInt(document.getElementById('sipSettingInput').value);
+       if (!val || val < 1) val = 250;
+       if (val > 2000) val = 2000;
+       if (!sip || sip < 1) sip = 15;
+       if (sip > 50) sip = 50;
+       gState.settings.customAmount = val;
+       gState.settings.sipAmount = sip;
+       saveSettings(gState.settings);
+       hideModal();
+       updateSettingsUI();
+       showToast('\u5df2\u4fdd\u5b58');
      }}]);
   setTimeout(function() { var e = document.getElementById('customSettingInput'); if (e) e.focus(); }, 100);
 }
@@ -1957,7 +1980,52 @@ function getMockUsers(count) {
   return users;
 }
 
+/* 排行榜日志 */
+var _lbLogs = [];
+function lbDebug(msg) {
+  _lbLogs.push(msg);
+}
+function toggleLBDebug() {
+  var logs = _lbLogs.join('<br>') || '<div style="text-align:center;color:#999;padding:12px;">暂无日志</div>';
+  showModal('📋 网络日志',
+    '<div style="max-height:60vh;overflow-y:auto;font-size:0.75rem;line-height:1.8;color:#666;word-break:break-all;">' + logs + '</div>',
+    [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
+  );
+}
+function showLBHelp() {
+  showModal('排行榜说明',
+    '<div style="font-size:0.8125rem;line-height:1.8;">' +
+    '<b>📊 多周期排行</b><br>' +
+    '今日 / 本周 / 本月三个标签，切换时自动按对应周期的水量排序。<br><br>' +
+    '<b>🏆 排名规则</b><br>' +
+    '按喝水量从高到低排序；连续达标天数相同时按总水量排序。<br><br>' +
+    '<b>🌐 在线模式</b><br>' +
+    '在设置中配置 Supabase 后可多人实时排行。<br><br>' +
+    '<b>🔧 管理员模式</b><br>' +
+    '排行榜标题连点 5 次进入，可删除异常排名。<br><br>' +
+    '<b>⏱ 数据更新</b><br>' +
+    '每次喝水后自动推送排行榜，无需手动操作。</div>',
+    [{ text: '知道了', cls: 'btn-confirm', action: hideModal }]
+  );
+}
+function showLBRules() {
+  showModal('🏆 排行榜规则',
+    '<div style="max-height:60vh;overflow-y:auto;font-size:0.8125rem;line-height:2;">' +
+    '⭐ 喝水越多排名越高，从高到低排序。<br>' +
+    '🔥 连续达标天数相同时，按总水量排序。<br><br>' +
+    '📊 支持今日 / 本周 / 本月三个周期视图。<br>' +
+    '切标签时自动按对应周期的累计水量排序。<br><br>' +
+    '🌐 在设置中配置 Supabase 后，可与他人实时排行。<br><br>' +
+    '🔧 排行榜标题连点 5 次可进入管理员模式。<br><br>' +
+    '⏱ 每次喝水后自动推送排行榜数据，无需手动操作。</div>',
+    [{ text: '关闭', cls: 'btn-cancel', action: hideModal }]
+  );
+}
+
 function renderLeaderboard() {
+  _lbLogs = [];
+  lbDebug('🏆 拉取排行榜...');
+  lbDebug('用户: ' + getAnonUserId().substring(0, 8) + '...');
   /* 先检查封禁状态 */
   checkBanStatus().then(function(banned) {
     _isBanned = banned;
@@ -1979,6 +2047,7 @@ function renderLeaderboardContent() {
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
   var myTodayRecs = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; });
   var myEntry = { emoji: me.emoji, name: me.name, todayMl: _cacheToday, weekMl: _cacheWeek, monthMl: _cacheMonth, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+  lbDebug('周期: ' + lbPeriod + ', 我的水量: ' + getPeriodMl(myEntry) + 'ml, 连续: ' + myStreak + '天');
 
   /* 根据当前选项卡决定用哪个字段排序和展示 */
   function getPeriodMl(u) {
@@ -2012,6 +2081,7 @@ function renderLeaderboardContent() {
           .map(function(u) {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
+          lbDebug('云端用户: ' + (u.nickname || LB_NAMES[idx] || '匿名') + ', 今日: ' + (u.today_ml||0) + 'ml');
           return {
             user_id: u.user_id,
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
@@ -2212,14 +2282,18 @@ function banUserOnCloud(userId, userName) {
 
 /* 检测当前用户是否被封禁 */
 function checkBanStatus() {
-  if (!isSupabaseConfigured()) return Promise.resolve(false);
+  if (!isSupabaseConfigured()) { lbDebug('⚠️ Supabase 未配置，跳过封禁检查'); return Promise.resolve(false); }
+  lbDebug('🔍 检查封禁状态...');
   return sbFetch('leaderboard?select=banned&user_id=eq.' + encodeURIComponent(getAnonUserId()) + '&limit=1')
     .then(function(resp) {
+      lbDebug('📥 HTTP ' + resp.status);
       if (!resp.ok) return false;
       return resp.json().then(function(data) {
-        return data && data.length > 0 && data[0].banned === true;
+        var banned = data && data.length > 0 && data[0].banned === true;
+        lbDebug(banned ? '🚫 已被封禁' : '✅ 正常');
+        return banned;
       });
-    }).catch(function() { return false; });
+    }).catch(function() { lbDebug('❌ 封禁检查失败'); return false; });
 }
 
 /* 清除封禁（"测试连接"成功后调用） */

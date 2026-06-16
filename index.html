@@ -25,7 +25,12 @@
       --card-bg: #fff;
       --nav-bg: #fff;
     }
-    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+    @font-face {
+      font-family: 'Twemoji';
+      src: url('https://cdn.jsdelivr.net/npm/@twemoji/font@latest/twemoji.woff2') format('woff2');
+      font-display: swap;
+    }
+    body { font-family: 'Twemoji', -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
     .page { display: none; padding: 16px 16px 80px; }
     .page.active { display: block; }
     .appbar { background: var(--primary); color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
@@ -217,7 +222,7 @@
     .heatmap-month { font-size: 0.8125rem; color: #666; margin-bottom: 8px; font-weight: 600; }
     .heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
     .heatmap-day { aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; color: #999; position: relative; overflow: hidden; }
-    .heatmap-day.has-data { color: #fff; font-weight: 600; }
+    .heatmap-day.has-data { color: #1565C0; font-weight: 600; }
     .heatmap-day.today { outline: 2px solid #4A90E2; outline-offset: 1px; }
     .heatmap-day .hm-tip { display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #333; color: #fff; font-size: 0.625rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 5; }
     .heatmap-day:hover .hm-tip { display: block; }
@@ -2239,7 +2244,7 @@ function renderUserRecordsModal(emoji, name, userId, records) {
   }
   var total = 0;
   var html = '<div style="max-height:50vh;overflow-y:auto;">';
-  records.forEach(function(r) { total += r.amount; html += '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);">' + formatRecordLine(r) + '</div>'; });
+  for (var ri = records.length - 1; ri >= 0; ri--) { var r = records[ri]; total += r.amount; html += '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);">' + formatRecordLine(r) + '</div>'; }
   html += '</div>' + formatRecordTotal(total);
   showModal(titleText + ' \u7684\u4eca\u65e5\u8bb0\u5f55', html,
     [{ text: '\u5173\u95ed', cls: 'btn-cancel', action: hideModal }]
@@ -2432,7 +2437,7 @@ function showDayRecords(dateKey) {
   var dayRecords = gState.records.filter(function(r) { return r.dateKey === dateKey; });
   var total = 0;
   var listHtml = '';
-  for (var i = 0; i < dayRecords.length; i++) {
+  for (var i = dayRecords.length - 1; i >= 0; i--) {
     total += dayRecords[i].amount;
     listHtml += '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);">' + formatRecordLine(dayRecords[i]) + '</div>';
   }

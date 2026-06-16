@@ -915,7 +915,8 @@ function getTodayRecords(records) {
 }
 
 function getTodayTotal(records) {
-  return getTodayRecords(records).reduce(function(s, r) { return s + r.amount; }, 0);
+  var todayRecs = getTodayRecords(records);
+  return todayRecs.length > 0 ? todayRecs.reduce(function(s, r) { return s + r.amount; }, 0) : 0;
 }
 
 function getWeekStats(records) {
@@ -1698,7 +1699,9 @@ function updateSettingsUI() {
   document.getElementById('remindSwitch').className = 'setting-switch' + (s.enableReminder ? ' on' : '');
   document.getElementById('settingRemindDesc').textContent = s.enableReminder ? '\u5df2\u5f00\u542f' : '\u5df2\u5173\u95ed';
   var darkMode = localStorage.getItem('dark_mode') || 'auto';
-  document.getElementById('darkSwitch').className = 'setting-switch' + (darkMode === 'on' ? ' on' : '');
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var isDarkEffective = darkMode === 'on' || (darkMode === 'auto' && prefersDark);
+  document.getElementById('darkSwitch').className = 'setting-switch' + (isDarkEffective ? ' on' : '');
   var darkLabels = { on: '\u5df2\u5f00\u542f', off: '\u5df2\u5173\u95ed', auto: '\u8ddf\u968f\u7cfb\u7edf' };
   document.getElementById('settingDarkDesc').textContent = darkLabels[darkMode] || '\u8ddf\u968f\u7cfb\u7edf';
   var me = getMyAnimal();

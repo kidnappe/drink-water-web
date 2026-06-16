@@ -2447,7 +2447,7 @@ function showDayRecords(dateKey) {
 loadAll();
 /* 加载 Twemoji，统一 emoji 样式 */
 function applyTwemoji(el) {
-  if (typeof twemoji !== 'undefined') twemoji.parse(el || document.body, { ext: '.svg', callback: function() {} });
+  if (typeof twemoji !== 'undefined') twemoji.parse(el || document.body, { ext: '.svg', base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/' });
 }
 var _ts = document.createElement('script');
 _ts.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';

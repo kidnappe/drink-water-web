@@ -611,7 +611,6 @@ function syncTodayToLeaderboard() {
       month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
-      pill_today: gState.records.some(function(r) { return r.dateKey === todayKey && r.type === 'pill'; }),
       banned: false,
       updated_at: new Date().toISOString()
     })
@@ -630,7 +629,7 @@ function syncTodayToLeaderboard() {
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
   lbDebug('📤 GET 排行榜数据...');
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,pill_today&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
     .then(function(resp) {
       lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }

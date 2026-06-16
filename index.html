@@ -1095,7 +1095,7 @@ function formatRecordLine(r) {
   var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   var ts = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   var mood = r.mood || '';
-  var isPill = r.type === 'pill';
+  var isPill = r.type === 'pill' || (!r.type && r.amount === 0);
   var icon = isPill ? '\u{1F48A}' : '\u{1F4A7}';
   var label = isPill ? '\u5403\u836f' : r.amount + ' ml';
   return '<div style="display:flex;align-items:center;flex:1;min-width:0;">' +
@@ -1132,7 +1132,7 @@ function renderRecords(todayRecords) {
     var addBtn = !r.mood
       ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="标注心情">➕</span>'
       : '';
-    var isPill = r.type === 'pill';
+    var isPill = r.type === 'pill' || (!r.type && r.amount === 0);
     var icon = isPill ? '\u{1F48A}' : '\u{1F4A7}';
     var label = isPill ? '\u5403\u836f' : r.amount + ' ml';
     div.innerHTML = '<span style="font-size:1.25rem;margin-right:10px;">' + icon + '</span>' +

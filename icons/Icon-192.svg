@@ -1,8 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#87CEEB"/>
-  <g transform="translate(40,30)">
-    <path fill="none" stroke="#fff" stroke-width="20" stroke-linejoin="round" d="M100 140h232l20 230c0 40-32 70-72 70H152c-40 0-72-30-72-70z"/>
-    <path fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" d="M332 210h30c12 0 22 10 22 22s-10 22-22 22h-22"/>
-    <path fill="rgba(255,255,255,0.5)" d="M120 260q20-12 40 0t40 0 40 0 40 0 40 0 40 0l-6 80H126z"/>
-  </g>
+  <rect width="512" height="512" fill="#fff"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64B5F6"/>
+      <stop offset="100%" stop-color="#1565C0"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#g)" d="M160 120h192l24 280c0 44-40 80-88 80h-64c-48 0-88-36-88-80l24-280z" opacity="0.9"/>
+  <path fill="none" stroke="#1565C0" stroke-width="8" d="M160 120h192"/>
+  <path fill="rgba(255,255,255,0.35)" d="M176 260q24-16 48 0t48 0 48 0 48 0l-8 100H184z"/>
+  <path fill="none" stroke="#1565C0" stroke-width="14" stroke-linecap="round" d="M352 180h40c16 0 28 12 28 28s-12 28-28 28h-28"/>
+  <circle cx="224" cy="200" r="6" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="280" cy="180" r="4" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="256" cy="220" r="5" fill="rgba(255,255,255,0.3)"/>
 </svg>

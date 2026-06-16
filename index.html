@@ -300,7 +300,10 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-title">&#x9009;&#x62E9;&#x6C34;&#x91CF;</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      选择水量
+      <span id="pillHomeBtn" onclick="addPill()" style="display:none;cursor:pointer;font-size:1.25rem;padding:4px 10px;border-radius:8px;background:#fff3e0;border:1px solid #FF9800;" title="记录吃药">💊</span>
+    </div>
     <div class="btn-row">
       <button class="btn-water small" onclick="addWater(250)">250ml</button>
       <button class="btn-water small" onclick="addWater(350)">350ml</button>
@@ -376,6 +379,11 @@
       <span class="setting-icon">⏱</span>
       <div class="setting-info"><div class="setting-label">提醒周期</div><div class="setting-desc" id="settingIntervalDesc">30 分钟</div></div>
       <span class="setting-arrow">›</span>
+    </div>
+    <div class="setting-item">
+      <span class="setting-icon">💊</span>
+      <div class="setting-info"><div class="setting-label">吃药</div><div class="setting-desc" id="settingPillDesc">已关闭</div></div>
+      <div class="setting-switch" id="pillSwitch" onclick="togglePill()"></div>
     </div>
     <div class="setting-item">
       <span class="setting-icon">🌙</span>
@@ -603,6 +611,7 @@ function syncTodayToLeaderboard() {
       month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
+      pill_today: gState.records.some(function(r) { return r.dateKey === todayKey && r.type === 'pill'; }),
       banned: false,
       updated_at: new Date().toISOString()
     })
@@ -621,7 +630,7 @@ function syncTodayToLeaderboard() {
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
   lbDebug('📤 GET 排行榜数据...');
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,pill_today&order=today_ml.desc&limit=20")
     .then(function(resp) {
       lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
@@ -887,7 +896,7 @@ function forceSync() {
 /* ── 结束 Supabase 集成 ── */
 
 function getDefaultSettings() {
-  return { dailyGoal: 2000, customAmount: 250, enableReminder: false, reminderInterval: 30, sipAmount: 15 };
+  return { dailyGoal: 2000, customAmount: 250, enableReminder: false, reminderInterval: 30, sipAmount: 15, enablePill: false };
 }
 
 function loadSettings() {
@@ -926,7 +935,8 @@ function getTodayRecords(records) {
 }
 
 function getTodayTotal(records) {
-  return getTodayRecords(records).reduce(function(s, r) { return s + r.amount; }, 0);
+  var recs = getTodayRecords(records).filter(function(r) { return r.type !== 'pill'; });
+  return recs.length > 0 ? recs.reduce(function(s, r) { return s + r.amount; }, 0) : 0;
 }
 
 function getWeekStats(records) {
@@ -1086,9 +1096,12 @@ function formatRecordLine(r) {
   var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   var ts = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   var mood = r.mood || '';
+  var isPill = r.type === 'pill';
+  var icon = isPill ? '\u{1F48A}' : '\u{1F4A7}';
+  var label = isPill ? '\u5403\u836f' : r.amount + ' ml';
   return '<div style="display:flex;align-items:center;flex:1;min-width:0;">' +
-    '<span style="font-size:1.25rem;margin-right:10px;">\u{1F4A7}</span>' +
-    '<div style="flex:1;min-width:0;"><span style="font-weight:600;">' + (mood ? mood + ' ' : '') + r.amount + ' ml</span>' +
+    '<span style="font-size:1.25rem;margin-right:10px;">' + icon + '</span>' +
+    '<div style="flex:1;min-width:0;"><span style="font-weight:600;">' + (mood ? mood + ' ' : '') + label + '</span>' +
     '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + ds + ' ' + ts + '</div></div></div>';
 }
 function formatRecordTotal(total) {
@@ -1120,8 +1133,11 @@ function renderRecords(todayRecords) {
     var addBtn = !r.mood
       ? '<span class="record-mood-add" onclick="applyMoodToRecord(\'' + r.id + '\')" title="标注心情">➕</span>'
       : '';
-    div.innerHTML = '<span style="font-size:1.25rem;margin-right:10px;">\u{1F4A7}</span>' +
-      '<div style="flex:1;min-width:0;"><span style="font-weight:600;">' + moodHtml + r.amount + ' ml' + addBtn + '</span>' +
+    var isPill = r.type === 'pill';
+    var icon = isPill ? '\u{1F48A}' : '\u{1F4A7}';
+    var label = isPill ? '\u5403\u836f' : r.amount + ' ml';
+    div.innerHTML = '<span style="font-size:1.25rem;margin-right:10px;">' + icon + '</span>' +
+      '<div style="flex:1;min-width:0;"><span style="font-weight:600;">' + moodHtml + label + addBtn + '</span>' +
       '<div style="font-size:0.75rem;color:#999;margin-top:2px;">' + dateStr + ' ' + timeStr + '</div></div>' +
       '<button class="record-del" onclick="deleteRecord(\'' + r.id + '\')" style="flex-shrink:0;margin-left:8px;border:none;background:none;color:#e74c3c;font-size:1.125rem;cursor:pointer;padding:4px;">\u2715</button>';
     list.appendChild(div);
@@ -1724,6 +1740,14 @@ function updateSettingsUI() {
   if (sipLabel) sipLabel.textContent = s.sipAmount || 15;
   document.getElementById('remindSwitch').className = 'setting-switch' + (s.enableReminder ? ' on' : '');
   document.getElementById('settingRemindDesc').textContent = s.enableReminder ? '\u5df2\u5f00\u542f' : '\u5df2\u5173\u95ed';
+  /* 吃药开关状态 */
+  var pillSwitch = document.getElementById('pillSwitch');
+  if (pillSwitch) pillSwitch.className = 'setting-switch' + (s.enablePill ? ' on' : '');
+  var pillDesc = document.getElementById('settingPillDesc');
+  if (pillDesc) pillDesc.textContent = s.enablePill ? '\u5df2\u5f00\u542f' : '\u5df2\u5173\u95ed';
+  /* 主页吃药按钮 */
+  var pillBtn = document.getElementById('pillHomeBtn');
+  if (pillBtn) pillBtn.style.display = s.enablePill ? '' : 'none';
   var darkMode = localStorage.getItem('dark_mode') || 'auto';
   document.getElementById('darkSwitch').className = 'setting-switch' + (darkMode === 'on' ? ' on' : '');
   var darkLabels = { on: '\u5df2\u5f00\u542f', off: '\u5df2\u5173\u95ed', auto: '\u8ddf\u968f\u7cfb\u7edf' };
@@ -1825,6 +1849,31 @@ function toggleReminder() {
       else { Notification.requestPermission().then(function(p) { if (p === 'granted') { gState.settings.enableReminder = true; saveSettings(gState.settings); updateSettingsUI(); startReminder(); showToast('\u559d\u6c34\u63d0\u9192\u5df2\u5f00\u542f'); } else { showToast('\u9700\u8981\u901a\u77e5\u6743\u9650\u624d\u80fd\u5f00\u542f\u63d0\u9192'); } }); }
     } else { showToast('\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u901a\u77e5'); }
   } else { gState.settings.enableReminder = false; saveSettings(gState.settings); updateSettingsUI(); stopReminder(); showToast('\u559d\u6c34\u63d0\u9192\u5df2\u5173\u95ed'); }
+}
+
+/* 吃药提醒开关 */
+function togglePill() {
+  gState.settings.enablePill = !gState.settings.enablePill;
+  saveSettings(gState.settings);
+  updateSettingsUI();
+  showToast(gState.settings.enablePill ? '\u5403\u836f\u63d0\u9192\u5df2\u5f00\u542f' : '\u5403\u836f\u63d0\u9192\u5df2\u5173\u95ed');
+}
+
+/* 记录吃药 */
+function addPill() {
+  if (!gState.settings.enablePill) { showToast('\u8bf7\u5148\u5728\u8bbe\u7f6e\u4e2d\u5f00\u542f\u5403\u836f\u63d0\u9192'); return; }
+  var todayKey = getDateKey(new Date());
+  gState.records.push({
+    id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)),
+    amount: 0,
+    type: 'pill',
+    dateTime: new Date().toISOString(),
+    dateKey: todayKey,
+    mood: ''
+  });
+  saveRecords(gState.records);
+  refreshUI();
+  showToast('✅ \u5df2\u8bb0\u5f55\u5403\u836f');
 }
 
 function startReminder() {
@@ -2050,7 +2099,7 @@ function renderLeaderboardContent() {
   ensureCache();
   var myStreak = calcStreak(gState.records, gState.settings.dailyGoal);
   var myTodayRecs = gState.records.filter(function(r) { return r.dateKey === getDateKey(new Date()); }).map(function(r) { return { amount: r.amount, time: r.dateTime, mood: r.mood || '' }; });
-  var myEntry = { emoji: me.emoji, name: me.name, todayMl: _cacheToday, weekMl: _cacheWeek, monthMl: _cacheMonth, streak: myStreak, todayRecords: myTodayRecs, isMe: true };
+  var myEntry = { emoji: me.emoji, name: me.name, todayMl: _cacheToday, weekMl: _cacheWeek, monthMl: _cacheMonth, streak: myStreak, todayRecords: myTodayRecs, pillToday: gState.records.some(function(r) { return r.dateKey === getDateKey(new Date()) && r.type === 'pill'; }), isMe: true };
   lbDebug('周期: ' + lbPeriod + ', 我的水量: ' + getPeriodMl(myEntry) + 'ml, 连续: ' + myStreak + '天');
 
   /* 根据当前选项卡决定用哪个字段排序和展示 */
@@ -2070,7 +2119,8 @@ function renderLeaderboardContent() {
       var uid = u.isMe ? '' : (u.user_id || '');
       var adminDel = _lbAdminMode && uid ? '<span class="lb-admin-del" data-deluid="' + uid + '" data-delnick="' + u.name.replace(/"/g, '&quot;') + '" onclick="event.stopPropagation();deleteUserRanking(this.getAttribute(\'data-deluid\'),this.getAttribute(\'data-delnick\'))" title="删除此用户排名">✕</span>' : '';
       var periodMl = getPeriodMl(u);
-      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb</div></div><div class="lb-amount">' + adminDel + ' ' + periodMl + ' <span class="lb-unit">ml</span></div></div>';
+      var pillBadge = u.pillToday ? ' <span style="font-size:0.75rem;" title="已吃药">💊</span>' : '';
+      html += '<div class="lb-item ' + (u.isMe ? 'lb-me' : '') + '" data-userid="' + uid + '" data-myname="' + u.name + '" data-myoji="' + u.emoji + '" onclick="showUserRecords(this)" style="cursor:pointer;">' + meTag + '<div class="lb-rank ' + (rank <= 3 ? ['gold','silver','bronze'][rank-1] : '') + '">' + rankText + '</div><div class="lb-avatar">' + u.emoji + '</div><div class="lb-info"><div class="lb-name">' + u.name + (u.isMe ? ' (\u4f60)' : '') + '</div><div class="lb-streak">' + (u.streak > 0 ? '\u{1F525}'.repeat(Math.min(u.streak, 5)) : '') + u.streak + '\u5929\u8fde\u51fb' + pillBadge + '</div></div><div class="lb-amount">' + adminDel + ' ' + periodMl + ' <span class="lb-unit">ml</span></div></div>';
     });
     document.getElementById('lbList').innerHTML = html || '<div class="lb-empty">\u8fd8\u6ca1\u6709\u6570\u636e\uff5e\u5feb\u53bb\u559d\u6c34\u5427\uff01</div>';
   }
@@ -2094,7 +2144,8 @@ function renderLeaderboardContent() {
             weekMl: u.week_ml || 0,
             monthMl: u.month_ml || 0,
             streak: u.streak || 0,
-            todayRecords: [],  /* 列表页不拉明细 */
+            todayRecords: [],
+            pillToday: u.pill_today === true,
             isMe: isMe
           };
         });

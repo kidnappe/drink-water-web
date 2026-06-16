@@ -25,12 +25,7 @@
       --card-bg: #fff;
       --nav-bg: #fff;
     }
-    @font-face {
-      font-family: 'Twemoji';
-      src: url('https://cdn.jsdelivr.net/npm/@twemoji/font@latest/twemoji.woff2') format('woff2');
-      font-display: swap;
-    }
-    body { font-family: 'Twemoji', -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
     .page { display: none; padding: 16px 16px 80px; }
     .page.active { display: block; }
     .appbar { background: var(--primary); color: #fff; padding: 10px 16px 8px; font-size: 1rem; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
@@ -2448,6 +2443,13 @@ function showDayRecords(dateKey) {
 }
 
 loadAll();
+/* 加载 Twemoji，统一 emoji 样式 */
+var _twemojiScript = document.createElement('script');
+_twemojiScript.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';
+_twemojiScript.onload = function() {
+  if (typeof twemoji !== 'undefined') { twemoji.parse(document.body, { ext: '.svg' }); }
+};
+document.head.appendChild(_twemojiScript);
 /* 网络恢复时自动推送离线期间的数据 */
 window.addEventListener('online', function() {
   if (isSupabaseConfigured()) debouncedSync();

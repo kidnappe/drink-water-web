@@ -12,14 +12,28 @@
 
 ### 🐛 修复
 
-- 吃药记录不触发云端同步 — addPill() 添加 debouncedSync() 调用
-- 周/月统计未过滤 pill 类型记录 — 日历热力图不再误渲染仅有吃药记录的天
-- schema.sql 缺少 pill_today 字段 — 新部署排行榜 💊 标记正常显示
-- 删除 updateCacheOnAdd 死代码
-- 清理 twemoji-master.zip 残留文件
-- 更新 README 文件结构，与实际一致
-- 跟踪 .context.md、docs/、migrate-week-month-ml.sql
-- 恢复完整 sw.js（activate + fetch 监听器），修复离线功能
+- **sw.js 还原完整版** — 提交版本只剩 stub（空 200 body），Safari 下导航请求返回空响应导致白屏；恢复完整的 network-first 策略（install 预缓存 + activate 清旧缓存 + fetch 网络优先/离线回退/导航兜底 index.html/503）
+- **吃药记录不触发云端同步** — addPill() 添加 debouncedSync() 调用
+- **周/月统计未过滤 pill 类型记录** — getWeekStats() / getMonthStats() 在累加前添加 .filter()，日历热力图不再误渲染仅有吃药记录的天
+- **schema.sql 缺少 pill_today 字段** — 新部署时排行榜读取 u.pill_today 永远 undefined，💊 标记不显示；已补列
+
+### 🧹 清理
+
+- **删除 updateCacheOnAdd 死代码** — 历史重构残留，从未被调用
+- **清理 twemoji-master.zip（8.1 MB）** — Twemoji 方案已废弃，删除残留
+- **删除 package.json / package-lock.json** — 项目零依赖，无实际作用
+
+### 📄 文档与配置
+
+- **更新 README 文件结构** — 移除已不存在的 migrate-pk-to-user_id.sql，添加 sw.js、docs/
+- **创建 .gitignore** — 忽略 backup/、.codegraph/、.reasonix/
+- **跟踪 .context.md、docs/、migrate-week-month-ml.sql** — 纳入版本管理
+
+### 🔧 版本号
+
+- APP_VERSION → v1.5.2，SW_VERSION → v2-20260622
+- 备份 backup/v1.5.2-safari版-complete.html + sw.js + schema.sql
+- Git tag v1.5.2
 
 ---
 

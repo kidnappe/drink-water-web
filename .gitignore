@@ -1,0 +1,11 @@
+# 项目本地缓存 / 探索残留
+twemoji-master.zip
+
+# 本地数据库备份
+backup/
+
+# 代码分析缓存
+.codegraph/
+
+# Agent 配置
+.reasonix/

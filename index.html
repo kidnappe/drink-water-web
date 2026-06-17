@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -946,7 +946,7 @@ function getWeekStats(records) {
     d.setDate(d.getDate() - i);
     map[getDateKey(d)] = 0;
   }
-  records.forEach(function(r) { if (r.dateKey in map) { map[r.dateKey] += r.amount; } });
+  records.filter(function(r) { return r.type !== 'pill'; }).forEach(function(r) { if (r.dateKey in map) { map[r.dateKey] += r.amount; } });
   return map;
 }
 
@@ -960,7 +960,7 @@ function getMonthStats(records) {
     var d = new Date(year, month, i);
     map[getDateKey(d)] = 0;
   }
-  records.forEach(function(r) { if (r.dateKey in map) { map[r.dateKey] += r.amount; } });
+  records.filter(function(r) { return r.type !== 'pill'; }).forEach(function(r) { if (r.dateKey in map) { map[r.dateKey] += r.amount; } });
   return map;
 }
 
@@ -1269,16 +1269,6 @@ function ensureCache() {
     _cacheMonth = 0; for (var m in mo) _cacheMonth += mo[m];
     _cacheDateKey = today;
   }
-}
-function updateCacheOnAdd(amount) {
-  ensureCache();
-  _cacheToday += amount;
-  var now = new Date();
-  var day = now.getDay();
-  var monday = new Date(now); monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  if (getDateKey(now) >= getDateKey(monday)) _cacheWeek += amount;
-  var monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  if (getDateKey(now).substring(0,7) === monthKey) _cacheMonth += amount;
 }
 function updateCacheOnDelete(record) {
   if (!record || !record.dateKey) return;
@@ -1871,6 +1861,7 @@ function addPill() {
     mood: ''
   });
   saveRecords(gState.records);
+  debouncedSync();
   refreshUI();
   showToast('✅ \u5df2\u8bb0\u5f55\u5403\u836f');
 }

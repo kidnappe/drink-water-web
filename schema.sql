@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS leaderboard (
   month_ml INTEGER DEFAULT 0,
   streak INTEGER DEFAULT 0,
   today_records JSONB DEFAULT '[]'::jsonb,   -- 今日喝水明细 [{id, amount, time, mood}]
+  pill_today BOOLEAN DEFAULT FALSE,           -- 今日是否已记录吃药
   banned BOOLEAN DEFAULT FALSE,               -- 管理员封禁标记
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

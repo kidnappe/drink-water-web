@@ -121,10 +121,11 @@ CREATE TABLE device_pairing (
 ```
 ├── index.html            ← 全部页面、样式、逻辑（单文件）
 ├── manifest.json         ← PWA 配置
+├── sw.js                 ← Service Worker（离线缓存策略）
 ├── CHANGELOG.md          ← 版本更新日志
 ├── schema.sql            ← 数据库建表脚本
-├── migrate-pk-to-user_id.sql       ← 数据库迁移脚本
 ├── migrate-week-month-ml.sql       ← 数据库迁移脚本
+├── docs/                 ← 开发文档
 ├── icons/                ← 应用图标
 └── README.md             ← 本文件
 ```

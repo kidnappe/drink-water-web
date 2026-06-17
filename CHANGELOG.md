@@ -8,6 +8,21 @@
 
 ---
 
+## v1.5.2 — Safari 稳定版
+
+### 🐛 修复
+
+- 吃药记录不触发云端同步 — addPill() 添加 debouncedSync() 调用
+- 周/月统计未过滤 pill 类型记录 — 日历热力图不再误渲染仅有吃药记录的天
+- schema.sql 缺少 pill_today 字段 — 新部署排行榜 💊 标记正常显示
+- 删除 updateCacheOnAdd 死代码
+- 清理 twemoji-master.zip 残留文件
+- 更新 README 文件结构，与实际一致
+- 跟踪 .context.md、docs/、migrate-week-month-ml.sql
+- 恢复完整 sw.js（activate + fetch 监听器），修复离线功能
+
+---
+
 ## v1.5.1 — 问题修复与优化
 
 ### 🐛 修复

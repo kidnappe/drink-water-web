@@ -411,7 +411,7 @@
     </div>
     <div class="setting-item" onclick="showAboutDialog()">
       <span class="setting-icon">ℹ️</span>
-      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc" id="settingVersionDesc">喝杯水吧 v1.4.2</div></div>
+      <div class="setting-info"><div class="setting-label">关于应用</div><div class="setting-desc" id="settingVersionDesc">喝杯水吧 v1.5.2</div></div>
       <span class="setting-arrow">›</span>
     </div>
   </div>
@@ -506,7 +506,7 @@
 </nav>
 
 <script>
-var APP_VERSION = 'v1.5.1';
+var APP_VERSION = 'v1.5.2';
 var STORAGE_KEY = 'drink_water_data';
 var SETTINGS_KEY = 'drink_water_settings';
 var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
@@ -2439,7 +2439,7 @@ window.addEventListener('online', function() {
   if (isSupabaseConfigured()) debouncedSync();
 });
 /* 注册 Service Worker（用于 PWA 安装） */
-var SW_DEPLOY = '20260617';
+var SW_DEPLOY = '20260620';
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js?v=' + SW_DEPLOY).catch(function() {});
 }

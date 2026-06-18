@@ -630,7 +630,7 @@ function syncTodayToLeaderboard() {
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
   lbDebug('📤 GET 排行榜数据...');
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,pill_today,updated_at&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,pill_today&order=today_ml.desc&limit=20")
     .then(function(resp) {
       lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
@@ -2123,7 +2123,6 @@ function renderLeaderboardContent() {
       if (data && data.length > 0) {
         var mapped = data
           .filter(function(u) { return !u.banned; })  /* 过滤掉被封禁的用户 */
-          .filter(function(u) { return u.updated_at && getDateKey(new Date(u.updated_at)) === getDateKey(new Date()); })  /* 只显示今天有推送的用户 */
           .map(function(u) {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
@@ -2220,6 +2219,9 @@ function showUserRecords(el) {
 }
 
 function renderUserRecordsModal(emoji, name, userId, records) {
+  /* 只显示本日记录（云端可能残留旧数据） */
+  var todayKey = getDateKey(new Date());
+  records = (records || []).filter(function(r) { return r.time && getDateKey(new Date(r.time)) === todayKey; });
   /* 显示简短 user_id 前 8 位 */
   var shortId = userId ? userId.substring(0, 8) : '';
   var titleText = emoji + ' ' + name + (shortId ? ' (' + shortId + ')' : '');

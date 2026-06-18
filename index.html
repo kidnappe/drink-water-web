@@ -611,6 +611,7 @@ function syncTodayToLeaderboard() {
       month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
+      pill_today: gState.records.some(function(r) { return r.dateKey === getDateKey(new Date()) && r.type === 'pill'; }),
       banned: false,
       updated_at: new Date().toISOString()
     })
@@ -629,7 +630,7 @@ function syncTodayToLeaderboard() {
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
   lbDebug('📤 GET 排行榜数据...');
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,pill_today,updated_at&order=today_ml.desc&limit=20")
     .then(function(resp) {
       lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
@@ -2122,6 +2123,7 @@ function renderLeaderboardContent() {
       if (data && data.length > 0) {
         var mapped = data
           .filter(function(u) { return !u.banned; })  /* 过滤掉被封禁的用户 */
+          .filter(function(u) { return u.updated_at && getDateKey(new Date(u.updated_at)) === getDateKey(new Date()); })  /* 只显示今天有推送的用户 */
           .map(function(u) {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;

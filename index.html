@@ -606,6 +606,7 @@ function syncTodayToLeaderboard() {
       user_id: getAnonUserId(),
       nickname: me.name,
       avatar_idx: me.idx,
+      date_key: getDateKey(new Date()),
       today_ml: total,
       week_ml: weekMl,
       month_ml: monthMl,
@@ -629,7 +630,7 @@ function syncTodayToLeaderboard() {
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
   lbDebug('📤 GET 排行榜数据...');
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,updated_at&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,date_key&order=today_ml.desc&limit=20")
     .then(function(resp) {
       lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
@@ -2130,12 +2131,12 @@ function renderLeaderboardContent() {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
           lbDebug('云端用户: ' + (u.nickname || LB_NAMES[idx] || '匿名') + ', 今日: ' + (u.today_ml||0) + 'ml');
-          var isToday = u.updated_at && new Date(u.updated_at).toISOString().substring(0, 10) === new Date().toISOString().substring(0, 10);
+          var todayKey = getDateKey(new Date());
           return {
             user_id: u.user_id,
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
-            todayMl: isToday ? (u.today_ml || 0) : 0,
+            todayMl: u.date_key === todayKey ? (u.today_ml || 0) : 0,
             weekMl: u.week_ml || 0,
             monthMl: u.month_ml || 0,
             streak: u.streak || 0,

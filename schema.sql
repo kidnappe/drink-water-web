@@ -5,9 +5,10 @@
 -- ============================================================
 
 -- 1. 排行榜 & 数据同步表
---    每用户一条记录，今日数据实时 upsert
+--    每用户一条记录，当日数据实时 upsert
 --    主键为 user_id，upsert 用 Prefer: resolution=merge-duplicates
 --    以 user_id 检测冲突，确保手机↔手表数据正确合并
+--    date_key 标识数据所属日期，排行榜查询只拉当天记录
 CREATE TABLE IF NOT EXISTS leaderboard (
   user_id TEXT PRIMARY KEY,
   nickname TEXT DEFAULT '',
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS leaderboard (
   month_ml INTEGER DEFAULT 0,
   streak INTEGER DEFAULT 0,
   today_records JSONB DEFAULT '[]'::jsonb,   -- 今日喝水明细 [{id, amount, time, mood}]
+  date_key TEXT NOT NULL DEFAULT '',           -- 数据所属日期 yyyy-mm-dd，排行榜只查当天
   pill_today BOOLEAN DEFAULT FALSE,           -- 今日是否已记录吃药
   banned BOOLEAN DEFAULT FALSE,               -- 管理员封禁标记
   updated_at TIMESTAMPTZ DEFAULT NOW()

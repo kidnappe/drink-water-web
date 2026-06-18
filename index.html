@@ -611,7 +611,6 @@ function syncTodayToLeaderboard() {
       month_ml: monthMl,
       streak: streak,
       today_records: todayRecords,
-      pill_today: gState.records.some(function(r) { return r.dateKey === getDateKey(new Date()) && r.type === 'pill'; }),
       banned: false,
       updated_at: new Date().toISOString()
     })
@@ -630,7 +629,7 @@ function syncTodayToLeaderboard() {
 function fetchOnlineLeaderboard() {
   if (!isSupabaseConfigured()) { lbDebug('❌ Supabase 未配置'); return Promise.resolve(null); }
   lbDebug('📤 GET 排行榜数据...');
-  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned&order=today_ml.desc&limit=20")
+  return sbFetch("leaderboard?select=user_id,nickname,avatar_idx,today_ml,week_ml,month_ml,streak,banned,updated_at&order=today_ml.desc&limit=20")
     .then(function(resp) {
       lbDebug('📥 HTTP ' + resp.status + (resp.ok ? ' ✅' : ' ❌'));
       if (!resp.ok) { console.warn('Fetch leaderboard failed:', resp.status); return null; }
@@ -2099,7 +2098,11 @@ function renderLeaderboardContent() {
   }
 
   function renderList(allUsers) {
-    allUsers.sort(function(a, b) { return getPeriodMl(b) - getPeriodMl(a); });
+    allUsers.sort(function(a, b) {
+      var diff = getPeriodMl(b) - getPeriodMl(a);
+      if (diff !== 0) return diff;
+      return (a.name || '').localeCompare(b.name || '', 'zh-CN');
+    });
     allUsers = allUsers.slice(0, 20);
     var html = '';
     allUsers.forEach(function(u, i) {
@@ -2127,16 +2130,17 @@ function renderLeaderboardContent() {
           var isMe = (u.user_id === getAnonUserId());
           var idx = u.avatar_idx || 0;
           lbDebug('云端用户: ' + (u.nickname || LB_NAMES[idx] || '匿名') + ', 今日: ' + (u.today_ml||0) + 'ml');
+          var isToday = u.updated_at && new Date(u.updated_at).toISOString().substring(0, 10) === new Date().toISOString().substring(0, 10);
           return {
             user_id: u.user_id,
             emoji: LB_ANIMALS[idx] || '\u{1F430}',
             name: u.nickname || LB_NAMES[idx] || '\u533f\u540d',
-            todayMl: u.today_ml || 0,
+            todayMl: isToday ? (u.today_ml || 0) : 0,
             weekMl: u.week_ml || 0,
             monthMl: u.month_ml || 0,
             streak: u.streak || 0,
             todayRecords: [],
-            pillToday: u.pill_today === true,
+            pillToday: false,
             isMe: isMe
           };
         });

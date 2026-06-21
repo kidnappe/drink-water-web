@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>喝水 · 手表版</title>
+<!-- 去掉 CDN 依赖；图表用极简自绘 -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:#0f1923;color:#e8edf3;user-select:none;}
+/* 手表全屏沉浸风格 — 黑暗底色 + 高对比度 */
+.page{display:none;position:absolute;inset:0;padding:8px 10px 56px;overflow-y:auto;scroll-behavior:smooth;background:#0f1923;}
+.page.active{display:flex;flex-direction:column;}
+/* 首页需 flex 子元素之间的间距，花园页直接居中 */
+#page-home.active{gap:6px;}
+/* 花园页：用页面自身做居中容器 */
+#page-garden.active{align-items:center;justify-content:center;}
+#page-garden .garden-wrap{text-align:center;}
+.page::-webkit-scrollbar{width:2px;}
+.page::-webkit-scrollbar-thumb{background:rgba(74,144,226,.3);border-radius:1px;}
+
+/* 顶部标题 */
+.appbar{display:flex;align-items:center;justify-content:center;padding:6px 10px 4px;font-size:0.8125rem;font-weight:600;color:#7ec8f0;gap:6px;flex-shrink:0;}
+.appbar .sub{font-size:0.625rem;font-weight:400;color:rgba(126,200,240,.5);}
+
+/* ===== 首页：水杯进度 ===== */
+.home-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:0;}
+.big-amount{font-size:2.5rem;font-weight:700;color:#e8edf3;line-height:1;}
+.big-unit{font-size:0.75rem;color:#6a7a8a;margin-left:2px;}
+.big-goal{font-size:0.625rem;color:#5a6a7a;margin-top:-2px;}
+.big-remain{font-size:0.6875rem;color:#4a90e2;margin-top:1px;}
+.big-remain.done{color:#4caf50;}
+/* 进度条 (跑道简化) */
+.track-mini{width:100%;max-width:280px;margin:4px auto;position:relative;}
+.track-bg{width:100%;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.track-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#4A90E2,#5BA3F5);transition:width .6s cubic-bezier(0.34,1.56,0.64,1);width:0%;}
+.track-labels{display:flex;justify-content:space-between;font-size:0.5rem;color:#5a6a7a;margin-top:1px;}
+
+/* 快速加水按钮 */
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:0 2px;flex-shrink:0;}
+.btn-water{padding:10px 0;border:none;border-radius:10px;font-size:0.8125rem;font-weight:600;cursor:pointer;transition:opacity .15s;color:#fff;background:rgba(74,144,226,.25);border:1px solid rgba(74,144,226,.3);}
+.btn-water:active{opacity:.5;transform:scale(.97);}
+.btn-water.custom{background:rgba(255,152,0,.2);border-color:rgba(255,152,0,.3);}
+.btn-water._250{background:rgba(74,144,226,.35);}
+.btn-water._350{background:rgba(74,144,226, .3);}
+.btn-water._500{background:rgba(74,144,226,.25);}
+.btn-water._1000{background:rgba(74,144,226,.2);}
+
+/* 今日记录精简 */
+.record-section{flex-shrink:0;margin-top:2px;}
+.record-header{display:flex;justify-content:space-between;font-size:0.625rem;color:#5a6a7a;padding:2px 2px;}
+.record-list{max-height:80px;overflow-y:auto;}
+.record-item{display:flex;align-items:center;padding:4px 4px;border-bottom:1px solid rgba(255,255,255,.04);font-size:0.625rem;gap:6px;}
+.record-item .rtime{color:#5a6a7a;width:38px;flex-shrink:0;}
+.record-item .ramount{flex:1;font-weight:500;color:#e8edf3;}
+.record-item .rmood{font-size:0.75rem;}
+.record-item .rdel{border:none;background:none;color:#e74c3c;font-size:0.875rem;cursor:pointer;padding:4px 8px;min-width:28px;text-align:center;}
+.empty-records{text-align:center;font-size:0.5625rem;color:#3a4a5a;padding:8px;}
+
+/* ===== Garden 页 ===== */
+.plant-emoji{font-size:3.5rem;transition:transform .5s;}
+.plant-name{font-size:0.75rem;color:#6a7a8a;}
+.streak-num{font-size:2rem;font-weight:700;color:#4A90E2;}
+.streak-label{font-size:0.625rem;color:#5a6a7a;}
+.garden-accessories{position:relative;display:inline-block;}
+.garden-accessory{position:absolute;animation:accFloat 2s ease-in-out infinite alternate;pointer-events:none;}
+.garden-accessory.star{top:-8px;right:-16px;font-size:1rem;}
+.garden-accessory.butterfly{top:-18px;left:-8px;font-size:0.875rem;animation-duration:1.6s;}
+.garden-accessory.crown{top:-16px;left:50%;transform:translateX(-50%);font-size:1.125rem;}
+.garden-accessory.rainbow{top:-24px;left:-6px;font-size:1.375rem;animation-duration:3s;}
+@keyframes accFloat{0%{transform:translateY(0)}100%{transform:translateY(-4px)}}
+
+/* ===== 历史页 ===== */
+.chart-wrap{flex:1;min-height:0;display:flex;flex-direction:column;}
+.chart-toggle{display:flex;gap:4px;margin-bottom:4px;}
+.chart-toggle button{flex:1;padding:5px;border:1px solid rgba(255,255,255,.1);border-radius:6px;background:rgba(255,255,255,.05);color:#8a9aaa;font-size:0.625rem;cursor:pointer;}
+.chart-toggle button.active{background:rgba(74,144,226,.25);border-color:#4A90E2;color:#e8edf3;}
+.chart-canvas-wrap{flex:1;min-height:80px;position:relative;}
+#chartCanvas{width:100%!important;height:100%!important;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;}
+.stat-card{background:rgba(255,255,255,.04);border-radius:6px;padding:5px 6px;text-align:center;}
+.stat-card .val{font-size:0.8125rem;font-weight:600;color:#e8edf3;}
+.stat-card .lbl{font-size:0.5rem;color:#5a6a7a;margin-top:1px;}
+
+/* ===== 设置页 ===== */
+.settings-list{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;}
+.setting-item{display:flex;align-items:center;padding:8px 8px;background:rgba(255,255,255,.04);border-radius:8px;gap:8px;cursor:pointer;flex-shrink:0;}
+.setting-item:active{background:rgba(255,255,255,.08);}
+.setting-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0;}
+.setting-info{flex:1;min-width:0;}
+.setting-label{font-size:0.6875rem;color:#e8edf3;}
+.setting-desc{font-size:0.5625rem;color:#5a6a7a;}
+.setting-value{font-size:0.6875rem;color:#4A90E2;text-align:right;flex-shrink:0;}
+.setting-switch{position:relative;width:32px;height:18px;background:rgba(255,255,255,.15);border-radius:9px;cursor:pointer;transition:.3s;flex-shrink:0;}
+.setting-switch.on{background:#4A90E2;}
+.setting-switch::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .3s;}
+.setting-switch.on::after{transform:translateX(14px);}
+.reminder-summary{font-size:0.5625rem;color:#5a6a7a;margin-top:1px;}
+/* 提醒时段选择 */
+.reminder-time-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.reminder-time-row label{font-size:0.6875rem;color:#8a9aaa;white-space:nowrap;}
+.reminder-time-row select{flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#e8edf3;font-size:0.75rem;outline:none;}
+.reminder-opt{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;margin-bottom:4px;cursor:pointer;}
+.reminder-opt:active{background:rgba(255,255,255,.05);}
+.reminder-opt .ro-label{flex:1;font-size:0.6875rem;color:#e8edf3;}
+.reminder-opt .ro-desc{font-size:0.5rem;color:#5a6a7a;}
+.reminder-opt input[type='radio']{accent-color:#4A90E2;width:16px;height:16px;}
+
+/* ===== 底部导航 ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#0f1923;display:flex;border-top:1px solid rgba(255,255,255,.06);z-index:100;flex-shrink:0;}
+.bottom-nav button{flex:1;border:none;background:none;padding:6px 0 4px;font-size:0.5rem;color:#5a6a7a;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;transition:color .2s;}
+.bottom-nav button .icon{font-size:1.125rem;}
+.bottom-nav button.active{color:#4A90E2;}
+
+/* ===== Modal ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:#1a2a3a;border-radius:16px 16px 0 0;padding:20px 16px;width:100%;max-width:400px;max-height:70vh;overflow-y:auto;}
+.modal h3{font-size:0.875rem;margin-bottom:10px;color:#e8edf3;}
+.modal input{width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:0.8125rem;margin-bottom:10px;background:rgba(0,0,0,.3);color:#e8edf3;outline:none;}
+.modal input:focus{border-color:#4A90E2;}
+.modal-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;}
+.modal-actions button{padding:7px 16px;border-radius:8px;border:none;font-size:0.75rem;cursor:pointer;}
+.btn-cancel{background:rgba(255,255,255,.1);color:#8a9aaa;}
+.btn-confirm{background:#4A90E2;color:#fff;}
+.btn-danger{background:#e74c3c;color:#fff;}
+.modal .hint{font-size:0.5625rem;color:#5a6a7a;margin-top:-6px;margin-bottom:6px;}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#e8edf3;padding:6px 14px;border-radius:6px;font-size:0.625rem;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+
+/* ===== 表情选择（心情） ===== */
+.mood-mini{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;padding:4px 0;}
+.mood-btn{font-size:1rem;padding:3px 5px;border:1px solid transparent;border-radius:6px;background:rgba(255,255,255,.05);cursor:pointer;transition:all .15s;}
+.mood-btn:active{transform:scale(1.15);}
+.mood-btn.active{border-color:#4A90E2;background:rgba(74,144,226,.2);}
+
+/* ===== 头像选择 ===== */
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px 0;}
+.avatar-opt{text-align:center;padding:4px;cursor:pointer;border-radius:8px;border:2px solid transparent;}
+.avatar-opt:active{background:rgba(74,144,226,.15);}
+.avatar-opt.sel{border-color:#4A90E2;background:rgba(74,144,226,.15);}
+.avatar-opt .aemoji{font-size:1.375rem;}
+.avatar-opt .aname{font-size:0.5rem;color:#5a6a7a;margin-top:1px;}
+
+/* ===== 溢出滚动美化 ===== */
+.modal-scroll{max-height:50vh;overflow-y:auto;padding:4px 0;}
+.modal-scroll::-webkit-scrollbar{width:2px;}
+.modal-scroll::-webkit-scrollbar-thumb{background:rgba(74,144,226,.3);border-radius:1px;}
+
+/* ===== 响应式微调 ===== */
+@media (max-height:430px){
+  .big-amount{font-size:2rem;}
+  .btn-water{padding:8px 0;font-size:0.75rem;}
+  .plant-emoji{font-size:3rem;}
+}
+/* ===== 浅色模式 (白色背景) ===== */
+body.light{background:#f8f9fa!important;color:#2c3e50;}
+body.light .appbar{color:#4A90E2;}
+body.light .appbar .sub{color:rgba(74,144,226,.4);}
+body.light .big-amount{color:#2c3e50;}
+body.light .big-goal{color:#5a7a9a;}
+body.light .big-remain{color:#4A90E2;}
+body.light .track-bg{background:rgba(0,0,0,.08);}
+body.light .track-labels{color:#8a9aaa;}
+body.light .btn-water{color:#2c3e50;background:rgba(74,144,226,.12);border-color:rgba(74,144,226,.25);}
+body.light .btn-water._250{background:rgba(74,144,226,.2);}
+body.light .btn-water._350{background:rgba(74,144,226,.15);}
+body.light .btn-water._500{background:rgba(74,144,226,.12);}
+body.light .btn-water._1000{background:rgba(74,144,226,.1);}
+body.light .btn-water.custom{background:rgba(255,152,0,.12);border-color:rgba(255,152,0,.25);}
+body.light .record-header{color:#8a9aaa;}
+body.light .record-item{border-color:rgba(0,0,0,.06);}
+body.light .record-item .rtime{color:#8a9aaa;}
+body.light .record-item .ramount{color:#2c3e50;}
+body.light .setting-item{background:rgba(0,0,0,.04);}
+body.light .setting-label{color:#2c3e50;}
+body.light .setting-desc{color:#8a9aaa;}
+body.light .setting-value{color:#4A90E2;}
+body.light .setting-switch{background:rgba(0,0,0,.15);}
+body.light .plant-name{color:#8a9aaa;}
+body.light .streak-num{color:#4A90E2;}
+body.light .streak-label{color:#8a9aaa;}
+body.light .bottom-nav{background:#ffffff;border-top-color:rgba(0,0,0,.08);}
+body.light .page{background:#f8f9fa;}
+body.light .bottom-nav button{color:#8a9aaa;}
+body.light .bottom-nav button.active{color:#4A90E2;}
+body.light .stat-card{background:rgba(0,0,0,.04);}
+body.light .stat-card .val{color:#2c3e50;}
+body.light .stat-card .lbl{color:#8a9aaa;}
+body.light .modal{background:#ffffff;}
+body.light .modal h3{color:#2c3e50;}
+body.light .modal input{background:#f0f2f5;border-color:rgba(0,0,0,.12);color:#2c3e50;}
+body.light .modal input:focus{border-color:#4A90E2;}
+body.light .modal .hint{color:#8a9aaa;}
+body.light .btn-cancel{background:rgba(0,0,0,.08);color:#5a7a9a;}
+body.light .lb-item{background:rgba(0,0,0,.04);}
+body.light .lb-name{color:#2c3e50;}
+body.light .lb-detail{color:#8a9aaa;}
+body.light .lb-today{color:#4A90E2;}
+body.light .lb-streak{color:#8a9aaa;}
+body.light .lb-self{background:rgba(74,144,226,.1);border-color:rgba(74,144,226,.25);}
+body.light .lb-refresh button{background:rgba(74,144,226,.15);color:#4A90E2;}
+body.light .chart-toggle button{background:rgba(0,0,0,.04);color:#8a9aaa;border-color:rgba(0,0,0,.1);}
+body.light .chart-toggle button.active{background:rgba(74,144,226,.15);border-color:#4A90E2;color:#2c3e50;}
+body.light .record-section .record-list .rdel{color:#e74c3c;}
+body.light .mood-btn{background:rgba(0,0,0,.05);}
+body.light .empty-records{color:#b0c0d0;}
+body.light #settingReminderDesc{color:#8a9aaa;}
+body.light .reminder-time-row select{background:#f0f2f5;border-color:rgba(0,0,0,.12);color:#2c3e50;}
+body.light .reminder-opt .ro-label{color:#2c3e50;}
+body.light .reminder-opt .ro-desc{color:#8a9aaa;}
+/* ===== 排行榜 ===== */
+.lb-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.lb-list{flex:1;overflow-y:auto;padding:2px 0;}
+.lb-item{display:flex;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:3px;background:rgba(255,255,255,.03);gap:6px;}
+.lb-rank{font-size:0.75rem;font-weight:700;width:18px;text-align:center;flex-shrink:0;}
+.lb-rank.gold{color:#FFD700;}
+.lb-rank.silver{color:#C0C0C0;}
+.lb-rank.bronze{color:#CD7F32;}
+.lb-avatar{font-size:1.25rem;flex-shrink:0;}
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-size:0.6875rem;color:#e8edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-detail{font-size:0.5rem;color:#5a6a7a;}
+.lb-stats{text-align:right;flex-shrink:0;}
+.lb-today{font-size:0.75rem;font-weight:600;color:#4A90E2;}
+.lb-streak{font-size:0.5rem;color:#5a6a7a;}
+.lb-empty{text-align:center;padding:20px;font-size:0.625rem;color:#5a6a7a;}
+.lb-empty .icon{font-size:2rem;display:block;margin-bottom:8px;}
+.lb-refresh{text-align:center;padding:4px;}
+.lb-refresh button{border:none;background:rgba(74,144,226,.2);color:#4A90E2;padding:4px 12px;border-radius:6px;font-size:0.5625rem;cursor:pointer;}
+.lb-refresh button:active{background:rgba(74,144,226,.4);}
+.lb-self{background:rgba(74,144,226,.1);border:1px solid rgba(74,144,226,.2);}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <span id="appbarTitle">💧 喝水</span>
+  <span class="sub" id="motivationMsg"></span>
+</div>
+
+<!-- ===== 首页 TAB ===== -->
+<div class="page active" id="page-home">
+  <div class="home-main">
+    <div class="big-amount"><span id="todayAmount">0</span><span class="big-unit">ml</span></div>
+    <div class="big-goal" id="todayGoalText">目标 2000 ml</div>
+    <div class="big-remain" id="todayRemainText">还差 2000 ml</div>
+    <div class="track-mini">
+      <div class="track-bg"><div class="track-fill" id="trackFill"></div></div>
+      <div class="track-labels"><span id="trackStart">0</span><span id="trackGoalLabel">2000</span></div>
+    </div>
+  </div>
+
+  <!-- 心情快捷选择 -->
+  <div style="flex-shrink:0;">
+    <div class="mood-mini" id="moodRow"></div>
+  </div>
+
+  <!-- 快速加水 -->
+  <div class="btn-grid">
+    <button class="btn-water _250" onclick="addWater(250)">250ml</button>
+    <button class="btn-water _350" onclick="addWater(350)">350ml</button>
+    <button class="btn-water _500" onclick="addWater(500)">500ml</button>
+    <button class="btn-water _1000" onclick="addWater(1000)">1000ml</button>
+    <button class="btn-water custom" onclick="showCustomDialog()" style="grid-column:1/3;">自定义水量</button>
+  </div>
+
+  <!-- 今日记录 -->
+  <div class="record-section">
+    <div class="record-header"><span>📋 今日记录</span><span id="recordCount">0</span></div>
+    <div class="record-list" id="recordList"><div class="empty-records">还没有喝水记录～</div></div>
+  </div>
+</div>
+
+<!-- ===== 花园 TAB ===== -->
+<div class="page" id="page-garden">
+  <div class="garden-wrap">
+    <div class="plant-emoji" id="plantEmoji">🌰</div>
+    <div class="plant-name" id="plantName">种子休眠中</div>
+    <div style="margin-top:8px;text-align:center;">
+      <div class="streak-num"><span id="streakCount">0</span></div>
+      <div class="streak-label">连续达标天数</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 历史 TAB ===== -->
+<div class="page" id="page-history">
+  <div class="chart-wrap">
+    <div class="chart-toggle" id="chartToggle">
+      <button class="active" onclick="switchChart(true)">本周</button>
+      <button onclick="switchChart(false)">本月</button>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="val" id="statAvg">0</div><div class="lbl">日均(ml)</div></div>
+    <div class="stat-card"><div class="val" id="statMax">0</div><div class="lbl">最高(ml)</div></div>
+    <div class="stat-card"><div class="val" id="statMin">0</div><div class="lbl">最低(ml)</div></div>
+    <div class="stat-card"><div class="val" id="statGoal">0</div><div class="lbl">达标(天)</div></div>
+  </div>
+</div>
+
+<!-- ===== 设置 TAB ===== -->
+<div class="page" id="page-settings">
+  <div class="settings-list">
+    <div class="setting-item" onclick="showGoalDialog()">
+      <span class="setting-icon">🎯</span>
+      <div class="setting-info"><div class="setting-label">每日目标</div><div class="setting-desc">调整喝水量目标</div></div>
+      <span class="setting-value" id="settingGoal">2000</span>
+    </div>
+    <div class="setting-item" onclick="showCustomAmountDialog()">
+      <span class="setting-icon">💧</span>
+      <div class="setting-info"><div class="setting-label">自定义水量</div><div class="setting-desc">快捷按钮默认值</div></div>
+      <span class="setting-value" id="settingCustom">250</span>
+    </div>
+    <div class="setting-item">
+      <span class="setting-icon">🌙</span>
+      <div class="setting-info"><div class="setting-label">深色模式</div><div class="setting-desc" id="settingDarkDesc">已开启</div></div>
+      <div class="setting-switch on" id="darkSwitch" onclick="toggleDarkMode()"></div>
+    </div>
+    <div class="setting-item" onclick="showReminderDialog()">
+      <span class="setting-icon">🔔</span>
+      <div class="setting-info"><div class="setting-label">喝水提醒</div><div class="reminder-summary" id="settingReminderDesc">已关闭</div></div>
+      <span class="setting-value" id="settingReminderValue">›</span>
+    </div>
+    <div class="setting-item" onclick="showAvatarDialog()">
+      <span class="setting-icon" id="settingAvatarPreview">🐼</span>
+      <div class="setting-info"><div class="setting-label">头像</div><div class="setting-desc" id="settingAvatarName">点击更换</div></div>
+      <span class="setting-value">›</span>
+    </div>
+    <div class="setting-item" onclick="showNicknameDialog()">
+      <span class="setting-icon">✏️</span>
+      <div class="setting-info"><div class="setting-label">昵称</div><div class="setting-desc">排行榜显示</div></div>
+      <span class="setting-value" id="settingNickname">未设置</span>
+    </div>
+    <div class="setting-item" onclick="showSupabaseDialog()">
+      <span class="setting-icon">🌐</span>
+      <div class="setting-info"><div class="setting-label">在线排行榜</div><div class="setting-desc" id="settingSupabaseDesc">未配置</div></div>
+      <span class="setting-value">›</span>
+    </div>
+    <div class="setting-item" onclick="pairWithPhone()">
+      <span class="setting-icon">📱</span>
+      <div class="setting-info"><div class="setting-label">连接手机</div><div class="setting-desc" id="settingPairDesc">与手机端同步数据</div></div>
+      <span class="setting-value" id="settingPairStatus">›</span>
+    </div>
+    <div class="setting-item" onclick="doForceSync()">
+      <span class="setting-icon">🔄</span>
+      <div class="setting-info"><div class="setting-label">立即同步</div><div class="setting-desc">推送并拉取今日记录</div></div>
+      <span class="setting-value">›</span>
+    </div>
+    <div id="syncDebugWrap" style="display:none;margin:2px 4px;">
+      <div id="syncDebugSummary" style="font-family:monospace;font-size:0.55rem;color:#8a9aaa;background:rgba(0,0,0,.15);border-radius:6px;padding:6px 8px;line-height:1.7;cursor:pointer;" onclick="toggleSyncDebug()"></div>
+      <div id="syncDebugFull" style="display:none;font-family:monospace;font-size:0.5rem;color:#8a9aaa;background:rgba(0,0,0,.12);border-radius:6px;padding:6px 8px;line-height:1.7;max-height:200px;overflow-y:auto;word-break:break-all;"></div>
+    </div>
+    <div class="setting-item" onclick="disconnectCloud()" style="border:1px solid rgba(231,76,60,.2);">
+      <span class="setting-icon">🔌</span>
+      <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">断开连接</div><div class="setting-desc">清除排行榜配置</div></div>
+      <span class="setting-value" style="color:#e74c3c;">›</span>
+    </div>
+    <div class="setting-item" onclick="exportData()">
+      <span class="setting-icon">📤</span>
+      <div class="setting-info"><div class="setting-label">导出数据</div><div class="setting-desc">备份到 JSON</div></div>
+      <span class="setting-value">›</span>
+    </div>
+    <div class="setting-item" onclick="document.getElementById('importInput').click()">
+      <span class="setting-icon">📥</span>
+      <div class="setting-info"><div class="setting-label">导入数据</div><div class="setting-desc">从 JSON 恢复</div></div>
+      <span class="setting-value">›</span>
+    </div>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+    <div class="setting-item" onclick="showResetDialog()" style="border:1px solid rgba(231,76,60,.2);">
+      <span class="setting-icon">🗑️</span>
+      <div class="setting-info"><div class="setting-label" style="color:#e74c3c;">重置数据</div><div class="setting-desc">清空所有喝水记录</div></div>
+      <span class="setting-value">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 排行榜 TAB ===== -->
+<div class="page" id="page-leaderboard">
+  <div class="lb-wrap">
+    <div class="lb-list" id="lbList">
+      <div class="lb-empty"><span class="icon">🌐</span>加载中...</div>
+    </div>
+    <div class="lb-refresh">
+      <button onclick="loadLeaderboard()">🔄 刷新</button>
+      <button onclick="showDebugLogs()" style="margin-left:4px;">📋</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)hideModal()">
+  <div class="modal" id="modalContent">
+    <h3 id="modalTitle">标题</h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== 底部导航 ===== -->
+<nav class="bottom-nav">
+  <button class="active" onclick="switchTab(0)"><span class="icon">💧</span> 喝水</button>
+  <button onclick="switchTab(1)"><span class="icon">🌱</span> 花园</button>
+  <button onclick="switchTab(2)"><span class="icon">📊</span> 历史</button>
+  <button onclick="switchTab(3)"><span class="icon">🏆</span> 排行</button>
+  <button onclick="switchTab(4)"><span class="icon">⚙️</span> 设置</button>
+</nav>
+
+<script>
+/* ===== 核心数据层 (与 Web 版完全兼容) ===== */
+var STORAGE_KEY = 'drink_water_data';
+var SETTINGS_KEY = 'drink_water_settings';
+var SUPABASE_CONFIG_KEY = 'drink_water_supabase';
+var ANON_USER_KEY = 'drink_water_user_id';
+
+function getDateKey(d){
+  var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+/* === 设置 === */
+function getDefaultSettings(){return{dailyGoal:2000,customAmount:250,enableReminder:false};}
+function loadSettings(){try{var r=localStorage.getItem(SETTINGS_KEY);return r?Object.assign({},getDefaultSettings(),JSON.parse(r)):getDefaultSettings();}catch(e){return getDefaultSettings();}}
+function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
+
+/* === 记录 === */
+function loadRecords(){try{var r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):[];}catch(e){return[];}}
+function saveRecords(rs){localStorage.setItem(STORAGE_KEY,JSON.stringify(rs));}
+
+function getTodayRecords(records){var k=getDateKey(new Date());return records.filter(function(r){return r.dateKey===k;});}
+function getTodayTotal(records){return getTodayRecords(records).reduce(function(s,r){return s+r.amount;},0);}
+
+/* === 连续天数 & 植物 === */
+var PLANT_STAGES=[
+  {emoji:'\u{1F330}',name:'种子休眠中',minDays:0},
+  {emoji:'\u{1F331}',name:'嫩芽破土',minDays:1},
+  {emoji:'\u{1F33F}',name:'健壮成长',minDays:3},
+  {emoji:'\u{1F33B}',name:'含苞待放',minDays:7},
+  {emoji:'\u{1F333}',name:'枝繁叶茂',minDays:14},
+  {emoji:'\u{1F338}',name:'花开满树',minDays:30}
+];
+
+function calcStreak(records,dailyGoal){
+  var today=new Date(),streak=0;
+  for(var i=0;;i++){
+    var d=new Date(today);d.setDate(d.getDate()-i);
+    var key=getDateKey(d);
+    var total=records.filter(function(r){return r.dateKey===key;}).reduce(function(s,r){return s+r.amount;},0);
+    if(total>=dailyGoal){streak++;}else{break;}
+  }
+  return streak;
+}
+
+function calcExcessStreak(records,dailyGoal){
+  var today=new Date(),streak=0;
+  for(var i=0;;i++){
+    var d=new Date(today);d.setDate(d.getDate()-i);
+    var key=getDateKey(d);
+    var total=records.filter(function(r){return r.dateKey===key;}).reduce(function(s,r){return s+r.amount;},0);
+    if(total>dailyGoal){streak++;}else{break;}
+  }
+  return streak;
+}
+
+function getPlantStage(streak){
+  var stage=PLANT_STAGES[0];
+  for(var i=0;i<PLANT_STAGES.length;i++){if(streak>=PLANT_STAGES[i].minDays)stage=PLANT_STAGES[i];}
+  return stage;
+}
+
+function getExcessAccessories(excessStreak){
+  var list=[];
+  if(excessStreak>=3)list.push({emoji:'\u2B50',cls:'accessory star'});
+  if(excessStreak>=7)list.push({emoji:'\u{1F98B}',cls:'accessory butterfly'});
+  if(excessStreak>=14)list.push({emoji:'\u{1F451}',cls:'accessory crown'});
+  if(excessStreak>=30)list.push({emoji:'\u{1F308}',cls:'accessory rainbow'});
+  return list;
+}
+
+/* === 图表 (极简自绘，无 Chart.js 依赖) === */
+function getWeekStats(records){
+  var now=new Date(),map={};
+  for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);map[getDateKey(d)]=0;}
+  records.forEach(function(r){if(r.dateKey in map)map[r.dateKey]+=r.amount;});
+  return map;
+}
+function getMonthStats(records){
+  var now=new Date(),year=now.getFullYear(),month=now.getMonth(),days=new Date(year,month+1,0).getDate(),map={};
+  for(var i=1;i<=days;i++){var d=new Date(year,month,i);map[getDateKey(d)]=0;}
+  records.forEach(function(r){if(r.dateKey in map)map[r.dateKey]+=r.amount;});
+  return map;
+}
+
+var gState={records:[],settings:getDefaultSettings(),chartWeek:true};
+var _selectedMood='';
+
+/* === UI 渲染 === */
+function renderHome(){
+  var total=getTodayTotal(gState.records),goal=gState.settings.dailyGoal;
+  var pct=Math.min(total/goal,1),isMet=total>=goal;
+  document.getElementById('todayAmount').textContent=total;
+  document.getElementById('todayGoalText').textContent='目标 '+goal+' ml';
+  var remainEl=document.getElementById('todayRemainText');
+  if(isMet){
+    remainEl.textContent='🎉 今日达标！';
+    remainEl.className='big-remain done';
+  }else{
+    remainEl.textContent='还差 '+(goal-total)+' ml';
+    remainEl.className='big-remain';
+  }
+  document.getElementById('trackFill').style.width=(pct*100)+'%';
+  document.getElementById('trackGoalLabel').textContent=goal;
+
+  /* 今日记录 */
+  var todayRecs=getTodayRecords(gState.records);
+  document.getElementById('recordCount').textContent='共 '+todayRecs.length+' 条';
+  var listEl=document.getElementById('recordList');
+  if(todayRecs.length===0){
+    listEl.innerHTML='<div class="empty-records">还没有喝水记录～</div>';
+  }else{
+    var html='';
+    var reversed=todayRecs.slice().reverse();
+    for(var i=0;i<reversed.length;i++){
+      var r=reversed[i];
+      var t=new Date(r.dateTime);
+      var ts=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+      html+='<div class="record-item">'+
+        '<span class="rtime">'+ts+'</span>'+
+        '<span class="ramount">'+(r.mood||'')+' '+r.amount+' ml</span>'+
+        '<button class="rdel" onclick="deleteRecord(\''+r.id+'\')">✕</button></div>';
+    }
+    listEl.innerHTML=html;
+  }
+}
+
+function renderGarden(){
+  var streak=calcStreak(gState.records,gState.settings.dailyGoal);
+  var stage=getPlantStage(streak);
+  var excess=calcExcessStreak(gState.records,gState.settings.dailyGoal);
+  var acc=getExcessAccessories(excess);
+  var html=stage.emoji;
+  if(acc.length>0){
+    html='<span class="garden-accessories">'+stage.emoji;
+    acc.forEach(function(a){html+='<span class="garden-accessory '+a.cls+'">'+a.emoji+'</span>';});
+    html+='</span>';
+  }
+  document.getElementById('plantEmoji').innerHTML=html;
+  document.getElementById('plantName').textContent=stage.name;
+  document.getElementById('streakCount').textContent=streak;
+  /* 鼓励语 */
+  var msgs=['开始喝水吧！每一口都是对体的爱❤️','今天也要加油喝水哦！','记得定时补充水分哦 💧','水是最好的饮料，坚持就是胜利！'];
+  document.getElementById('motivationMsg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+}
+
+function renderStats(){
+  var stats=gState.chartWeek?getWeekStats(gState.records):getMonthStats(gState.records);
+  var values=Object.values(stats);
+  var total=0;for(var i=0;i<values.length;i++)total+=values[i];
+  var avg=values.length>0?Math.round(total/values.length):0;
+  var maxVal=values.length>0?Math.max.apply(null,values):0;
+  var nonZero=values.filter(function(v){return v>0;});
+  var minVal=nonZero.length>0?Math.min.apply(null,nonZero):0;
+  var goalDays=values.filter(function(v){return v>=gState.settings.dailyGoal;}).length;
+  document.getElementById('statAvg').textContent=avg;
+  document.getElementById('statMax').textContent=maxVal;
+  document.getElementById('statMin').textContent=minVal;
+  document.getElementById('statGoal').textContent=goalDays;
+
+  /* 自绘条形图 (Canvas) */
+  var canvas=document.getElementById('chartCanvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var rect=canvas.parentElement.getBoundingClientRect();
+  var W=Math.max(rect.width-2,100),H=Math.max(rect.height-4,60);
+  canvas.width=W*2;canvas.height=H*2;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(2,2);
+  ctx.clearRect(0,0,W,H);
+
+  var entries=Object.entries(stats);
+  if(entries.length===0)return;
+  var maxVal2=Math.max.apply(null,Object.values(stats))||1;
+  var goalVal=gState.settings.dailyGoal;
+  var padL=4,padR=4,padT=4,padB=12;
+  var chartW=W-padL-padR,chartH=H-padT-padB;
+  var barW=Math.min(chartW/entries.length*0.65,12);
+  var gap=chartW/entries.length;
+
+  for(var i=0;i<entries.length;i++){
+    var x=padL+i*gap+(gap-barW)/2;
+    var val=entries[i][1];
+    var h=(val/maxVal2)*chartH;
+    var y=padT+chartH-h;
+    ctx.fillStyle=(val>=goalVal)?'rgba(76,175,80,0.7)':'rgba(74,144,226,0.7)';
+    ctx.beginPath();
+    ctx.roundRect(x,y,barW,h,2);
+    ctx.fill();
+    /* 标签 */
+    ctx.fillStyle='rgba(255,255,255,.3)';
+    ctx.font='6px sans-serif';
+    ctx.textAlign='center';
+    var d=new Date(entries[i][0]+'T00:00:00');
+    var lbl=(d.getMonth()+1)+'/'+d.getDate();
+    ctx.fillText(lbl,x+barW/2,padT+chartH+8);
+  }
+  /* 目标线 */
+  if(goalVal>0&&goalVal<=maxVal2){
+    var goalY=padT+chartH-(goalVal/maxVal2)*chartH;
+    ctx.setLineDash([2,2]);
+    ctx.strokeStyle='rgba(231,76,60,0.6)';
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(padL,goalY);ctx.lineTo(W-padR,goalY);ctx.stroke();
+    ctx.fillStyle='rgba(231,76,60,0.5)';
+    ctx.font='5px sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText('目标',W-padR-12,goalY-1);
+  }
+}
+
+/* roundRect polyfill for older browsers */
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    if(r>w/2)r=w/2;if(r>h/2)r=h/2;
+    this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);
+    this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);
+    this.arcTo(x,y,x+w,y,r);this.closePath();
+  };
+}
+
+function updateSettingsUI(){
+  var s=gState.settings;
+  document.getElementById('settingGoal').textContent=s.dailyGoal+' ml';
+  document.getElementById('settingCustom').textContent=s.customAmount+' ml';
+  var dm=localStorage.getItem('dark_mode')||'auto';
+  var isDark;
+  if(dm==='timer'){
+    var tc=loadTimerConfig();
+    var h=new Date().getHours();
+    isDark=!(h>=tc.sunrise&&h<tc.sunset);
+  }else{
+    isDark=dm==='on'||(dm==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  document.getElementById('darkSwitch').className='setting-switch'+(isDark?' on':'');
+  var labels={on:'已开启',off:'已关闭',auto:'跟随系统',timer:'定时切换'};
+  document.getElementById('settingDarkDesc').textContent=labels[dm]||'跟随系统';
+  var me=getMyAnimal();
+  document.getElementById('settingAvatarPreview').textContent=me.emoji;
+  document.getElementById('settingAvatarName').textContent=me.name;
+  document.getElementById('settingNickname').textContent=localStorage.getItem('lb_nickname')||'未设置';
+  var sbEl=document.getElementById('settingSupabaseDesc');
+  if(sbEl)sbEl.textContent=isSupabaseConfigured()?'✅ 已连接':'⚠️ 未配置';
+
+  /* 配对状态 */
+  var pStatus=document.getElementById('settingPairStatus');
+  var pDesc=document.getElementById('settingPairDesc');
+  if(pStatus){
+    var paired=localStorage.getItem('lb_paired_with_phone')==='1';
+    var configured=isSupabaseConfigured();
+    pStatus.textContent=configured?(paired?'✅':'›'):'⚠️';
+    if(pDesc){
+      var uid2=localStorage.getItem(ANON_USER_KEY)||'';
+      var shortId=uid2.length>8?uid2.substring(0,8):uid2;
+      if(configured&&paired){
+        pDesc.textContent='已与手机配对 · ID: '+shortId;
+      }else if(configured){
+        pDesc.textContent='未连接手机 · ID: '+shortId;
+      }else{
+        pDesc.textContent='需先配置服务器';
+      }
+    }
+  }
+
+  /* 提醒状态 */
+  var rc=loadReminderConfig();
+  var rDesc=document.getElementById('settingReminderDesc');
+  var rVal=document.getElementById('settingReminderValue');
+  if(rDesc){
+    if(rc.enabled){
+      rDesc.textContent='每 '+rc.intervalMin+' 分钟 · '+rc.startHour+':00-'+rc.endHour+':00';
+      if(rVal)rVal.textContent='🔔';
+    }else{
+      rDesc.textContent='已关闭';
+      if(rVal)rVal.textContent='›';
+    }
+  }
+}
+
+function refreshUI(){
+  renderHome();
+  renderGarden();
+  renderStats();
+  updateSettingsUI();
+}
+
+/* === 加水 === */
+function addWater(amount){
+  tryVibrate();
+  var todayKey=getDateKey(new Date());
+  var wasAlreadyAtGoal=getTodayTotal(gState.records)>=gState.settings.dailyGoal;
+  gState.records.push({
+    id:(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),
+    amount:amount,
+    dateTime:new Date().toISOString(),
+    dateKey:todayKey,
+    mood:_selectedMood||''
+  });
+  saveRecords(gState.records);
+  syncTodayToLeaderboard().then(function(){
+    var lbPage=document.getElementById('page-leaderboard');
+    if(lbPage&&lbPage.classList.contains('active'))loadLeaderboard();
+  });
+  if(wasAlreadyAtGoal){gState.todayExcessCount=(gState.todayExcessCount||0)+1;gState.lastExcessDateKey=todayKey;}
+  refreshUI();
+  _selectedMood='';
+  document.querySelectorAll('.mood-btn').forEach(function(b){b.classList.remove('active');});
+  showToast('已记录 '+amount+' ml');
+}
+
+function deleteRecord(id){
+  gState.records=gState.records.filter(function(r){return r.id!==id;});
+  saveRecords(gState.records);
+  syncTodayToLeaderboard().then(function(){
+    var lbPage=document.getElementById('page-leaderboard');
+    if(lbPage&&lbPage.classList.contains('active'))loadLeaderboard();
+  });
+  refreshUI();
+  showToast('记录已删除');
+}
+
+function showCustomDialog(){
+  var curr=gState.settings.customAmount||250;
+  showModal('自定义水量',
+    '<input type="number" id="customAmountInput" value="'+curr+'" placeholder="水量(ml)" min="1" max="2000"><div class="hint">范围 1-2000ml</div>',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'记录',cls:'btn-confirm',action:function(){
+       var val=parseInt(document.getElementById('customAmountInput').value);
+       if(val&&val>0&&val<=2000){hideModal();addWater(val);}
+       else showToast('请输入有效水量');
+     }}]);
+  setTimeout(function(){var e=document.getElementById('customAmountInput');if(e)e.focus();},100);
+}
+
+/* === 设置对话框 === */
+function showGoalDialog(){
+  showModal('每日目标',
+    '<input type="number" id="goalInput" value="'+gState.settings.dailyGoal+'" placeholder="目标(ml)" min="1" max="10000"><div class="hint">范围 1-10000ml</div>',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'保存',cls:'btn-confirm',action:function(){
+       var val=parseInt(document.getElementById('goalInput').value);
+       if(val&&val>0&&val<=10000){gState.settings.dailyGoal=val;saveSettings(gState.settings);hideModal();refreshUI();showToast('目标已设为 '+val+' ml');}
+       else showToast('请输入有效目标');
+     }}]);
+}
+function showCustomAmountDialog(){
+  showModal('自定义水量',
+    '<input type="number" id="customSettingInput" value="'+gState.settings.customAmount+'" placeholder="水量(ml)" min="1" max="2000"><div class="hint">范围 1-2000ml</div>',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'保存',cls:'btn-confirm',action:function(){
+       var val=parseInt(document.getElementById('customSettingInput').value);
+       if(val&&val>0&&val<=2000){gState.settings.customAmount=val;saveSettings(gState.settings);hideModal();updateSettingsUI();showToast('自定义水量已设为 '+val+' ml');}
+       else showToast('请输入有效水量');
+     }}]);
+}
+
+/* === 喝水提醒 === */
+var REMINDER_CONFIG_KEY = 'drink_water_reminder';
+
+function getDefaultReminderConfig(){
+  return {enabled:false,intervalMin:60,startHour:8,endHour:22};
+}
+
+function loadReminderConfig(){
+  try{var r=localStorage.getItem(REMINDER_CONFIG_KEY);return r?Object.assign({},getDefaultReminderConfig(),JSON.parse(r)):getDefaultReminderConfig();}catch(e){return getDefaultReminderConfig();}
+}
+
+function saveReminderConfig(cfg){
+  localStorage.setItem(REMINDER_CONFIG_KEY,JSON.stringify(cfg));
+  if(cfg.enabled){
+    scheduleReminder();
+  }else{
+    cancelReminder();
+  }
+}
+
+function scheduleReminder(){
+  var cfg=loadReminderConfig();
+  if(!cfg.enabled)return;
+  if(typeof AndroidBridge!=='undefined'){
+    AndroidBridge.scheduleReminder(cfg.intervalMin);
+  }
+}
+
+function cancelReminder(){
+  if(typeof AndroidBridge!=='undefined'){
+    AndroidBridge.cancelReminder();
+  }
+}
+
+function showReminderDialog(){
+  var cfg=loadReminderConfig();
+  var intervals=[{v:30,l:'30 分钟'},{v:60,l:'1 小时'},{v:90,l:'1.5 小时'},{v:120,l:'2 小时'}];
+  var intervalOpts='';
+  for(var i=0;i<intervals.length;i++){
+    var sel=intervals[i].v===cfg.intervalMin?' checked':'';
+    intervalOpts+='<div class="reminder-opt" onclick="this.querySelector(\'input\').click()">'+
+      '<input type="radio" name="rInterval" value="'+intervals[i].v+'"'+sel+'>'+
+      '<div><div class="ro-label">每 '+intervals[i].l+'</div></div></div>';
+  }
+  var body=
+    '<div class="reminder-opt" style="margin-bottom:6px;" onclick="this.querySelector(\'input\')?.click()">'+
+      '<input type="checkbox" id="rEnableCheck" '+(cfg.enabled?'checked':'')+'>'+
+      '<div><div class="ro-label">启用喝水提醒</div><div class="ro-desc">定时通知你补充水分</div></div>'+
+    '</div>'+
+    '<div style="font-size:0.625rem;color:#5a6a7a;margin-bottom:4px;">提醒间隔</div>'+
+    intervalOpts+
+    '<div class="reminder-time-row">'+
+      '<label>从</label><select id="rStartHour">'+hoursOptions(cfg.startHour)+'</select>'+
+      '<label>到</label><select id="rEndHour">'+hoursOptions(cfg.endHour)+'</select>'+
+    '</div>'+
+    '<div class="hint">仅在设定时段内提醒，避免夜间打扰</div>';
+  showModal('喝水提醒',body,
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'保存',cls:'btn-confirm',action:function(){saveReminderFromDialog();}}]);
+}
+
+function hoursOptions(selected){
+  var h='';
+  for(var i=0;i<24;i++){
+    var sel=i===selected?' selected':'';
+    var label=i<10?'0'+i+':00':i+':00';
+    h+='<option value="'+i+'"'+sel+'>'+label+'</option>';
+  }
+  return h;
+}
+
+function saveReminderFromDialog(){
+  var cfg=loadReminderConfig();
+  cfg.enabled=document.getElementById('rEnableCheck').checked;
+  var checkedInterval=document.querySelector('input[name="rInterval"]:checked');
+  if(checkedInterval)cfg.intervalMin=parseInt(checkedInterval.value);
+  cfg.startHour=parseInt(document.getElementById('rStartHour').value);
+  cfg.endHour=parseInt(document.getElementById('rEndHour').value);
+  saveReminderConfig(cfg);
+  hideModal();
+  updateSettingsUI();
+  showToast(cfg.enabled?'提醒已开启，每 '+cfg.intervalMin+' 分钟一次':'提醒已关闭');
+}
+
+/* === 触控反馈 === */
+function tryVibrate(){
+  if(typeof AndroidBridge!=='undefined'){
+    try{AndroidBridge.vibrate();}catch(e){}
+  }
+}
+
+function toggleDarkMode(){
+  var current=localStorage.getItem('dark_mode')||'auto';
+  var modes=['auto','on','off','timer'];
+  var next=modes[(modes.indexOf(current)+1)%modes.length];
+  localStorage.setItem('dark_mode',next);
+  applyDarkMode(next);
+  updateSettingsUI();
+  var labels={on:'深色模式已开启',off:'浅色模式已开启',auto:'已切换为跟随系统',timer:'已切换为定时切换'};
+  showToast(labels[next]);
+  if(next==='timer')showTimerDialog();
+}
+
+function applyDarkMode(mode){
+  /* 浅色模式白色背景，深色模式保留 OLED 黑色 */
+  var isDark;
+  if(mode==='timer'){
+    var tc=loadTimerConfig();
+    var h=new Date().getHours();
+    isDark=!(h>=tc.sunrise&&h<tc.sunset);
+  }else{
+    isDark=mode==='on'||(mode==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  document.body.style.background='';
+  document.body.className=isDark?'':'light';
+}
+
+/* === 定时深浅色 === */
+var DARK_TIMER_KEY = 'drink_water_dark_timer';
+
+function getDefaultTimerConfig(){
+  return {sunrise:6,sunset:18};
+}
+
+function loadTimerConfig(){
+  try{var r=localStorage.getItem(DARK_TIMER_KEY);return r?Object.assign({},getDefaultTimerConfig(),JSON.parse(r)):getDefaultTimerConfig();}catch(e){return getDefaultTimerConfig();}
+}
+
+function saveTimerConfig(cfg){
+  localStorage.setItem(DARK_TIMER_KEY,JSON.stringify(cfg));
+}
+
+function showTimerDialog(){
+  var tc=loadTimerConfig();
+  var body='<div style="margin-bottom:8px;font-size:0.6875rem;color:#5a6a7a;">设置深浅色自动切换的时间点</div>'+
+    '<div class="reminder-time-row">'+
+      '<label>🌅 亮色从</label><select id="tSunrise">'+hoursOptions(tc.sunrise)+'</select>'+
+    '</div>'+
+    '<div class="reminder-time-row">'+
+      '<label>🌙 深色从</label><select id="tSunset">'+hoursOptions(tc.sunset)+'</select>'+
+    '</div>'+
+    '<div class="hint">例如 6:00-18:00 为浅色，其余时间深色</div>';
+  showModal('定时深浅切换',body,
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'保存',cls:'btn-confirm',action:function(){
+       var tc2=loadTimerConfig();
+       tc2.sunrise=parseInt(document.getElementById('tSunrise').value);
+       tc2.sunset=parseInt(document.getElementById('tSunset').value);
+       saveTimerConfig(tc2);
+       applyDarkMode('timer');
+       hideModal();
+       updateSettingsUI();
+       showToast('定时已保存');
+     }}]);
+}
+
+/* === 头像/昵称 === */
+var LB_ANIMALS=['\u{1F43C}','\u{1F98A}','\u{1F430}','\u{1F436}','\u{1F431}','\u{1F981}','\u{1F42F}','\u{1F438}','\u{1F435}','\u{1F984}','\u{1F427}','\u{1F428}','\u{1F419}','\u{1F98B}','\u{1F422}','\u{1F98E}','\u{1F42C}','\u{1F9AD}','\u{1F99C}','\u{1F43F}\uFE0F','\u{1F980}','\u{1F421}','\u{1F433}','\u{1F40A}','\u{1F996}','\u{1F995}','\u{1F409}','\u{1F9A9}','\u{1F99A}','\u{1F9A2}'];
+var LB_NAMES=['小熊猫','小狐狸','小兔子','小狗狗','小猫咪','小狮子','小老虎','小青蛙','小猴子','小独角兽','小企鹅','小考拉','小章鱼','小蝴蝶','小乌龟','小蜻蜓','小海豚','小海豹','小鹦鹉','小松鼠','小螃蟹','小河马','小鲸鱼','小鳄鱼','小恐龙','小翼龙','小龙','小烈焰鸟','小孔雀','小天鹅'];
+
+function getMyAnimal(){
+  var id=localStorage.getItem('lb_animal_idx');
+  if(id===null){id=Math.floor(Math.random()*LB_ANIMALS.length);localStorage.setItem('lb_animal_idx',id.toString());}
+  var nickname=localStorage.getItem('lb_nickname')||'';
+  return{emoji:LB_ANIMALS[parseInt(id)],name:nickname||LB_NAMES[parseInt(id)],idx:parseInt(id)};
+}
+
+function showAvatarDialog(){
+  var me=getMyAnimal();
+  var grid='<div class="avatar-grid">';
+  for(var i=0;i<LB_ANIMALS.length;i++){
+    var sel=i===me.idx?' sel':'';
+    grid+='<div class="avatar-opt'+sel+'" onclick="selectAvatar('+i+')">'+
+      '<div class="aemoji">'+LB_ANIMALS[i]+'</div>'+
+      '<div class="aname">'+LB_NAMES[i]+'</div></div>';
+  }
+  grid+='</div>';
+  showModal('选择头像','<div class="modal-scroll">'+grid+'</div>',[{text:'关闭',cls:'btn-cancel',action:hideModal}]);
+}
+
+function selectAvatar(idx){
+  localStorage.setItem('lb_animal_idx',idx.toString());
+  hideModal();updateSettingsUI();showToast('头像已更换');
+}
+
+function showNicknameDialog(){
+  var current=localStorage.getItem('lb_nickname')||'';
+  showModal('修改昵称',
+    '<input type="text" id="nicknameInput" value="'+current+'" placeholder="输入昵称" maxlength="10"><div class="hint">最多 10 个字符</div>',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'保存',cls:'btn-confirm',action:function(){
+       var val=document.getElementById('nicknameInput').value.trim();
+       if(val){localStorage.setItem('lb_nickname',val);hideModal();updateSettingsUI();showToast('昵称已设');}
+       else{localStorage.removeItem('lb_nickname');hideModal();updateSettingsUI();showToast('已恢复默认名称');}
+     }}]);
+}
+
+/* === 数据导入导出 === */
+function exportData(){
+  var data={version:1,exportedAt:new Date().toISOString(),records:loadRecords(),settings:loadSettings()};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='drink_water_backup_'+getDateKey(new Date())+'.json';a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已导出');
+}
+
+function importData(event){
+  var file=event.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      if(data.records&&Array.isArray(data.records)){
+        saveRecords(data.records);gState.records=data.records;
+        if(data.settings){saveSettings(data.settings);gState.settings=data.settings;}
+        refreshUI();showToast('数据导入成功');
+      }else showToast('文件格式无效');
+    }catch(e){showToast('文件解析失败');}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+function showResetDialog(){
+  showModal('确认重置','确定要重置所有数据吗？此操作不可恢复。',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'确认重置',cls:'btn-danger',action:function(){saveRecords([]);gState.records=[];hideModal();refreshUI();showToast('数据已重置');}}]);
+}
+
+/* === Supabase (XMLHttpRequest, 兼容手表 WebView) === */
+var _debugLogs=[];
+
+function getAnonUserId(){
+  var id=localStorage.getItem(ANON_USER_KEY);
+  if(!id){id=crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,10);localStorage.setItem(ANON_USER_KEY,id);}
+  return id;
+}
+function loadSupabaseConfig(){
+  try{var r=localStorage.getItem(SUPABASE_CONFIG_KEY);if(r)return JSON.parse(r);}catch(e){}
+  // 内置默认配置，手表无需手动输入
+  return {url:'https://iqbkxsnanvupsvzckvrs.supabase.co', key:'sb_publishable_48GJWDTjOtydQXYEPVQZVQ_sFxPvRYf'};
+}
+function saveSupabaseConfig(cfg){localStorage.setItem(SUPABASE_CONFIG_KEY,JSON.stringify(cfg));}
+function isSupabaseConfigured(){var cfg=loadSupabaseConfig();return cfg.url&&cfg.key&&cfg.url.length>10&&cfg.key.length>10;}
+
+function sbFetch(path,options){
+  options=options||{};
+  var cfg=loadSupabaseConfig();
+  if(!cfg.url||!cfg.key)return Promise.reject(new Error('未配置'));
+  var url=cfg.url.replace(/\/+$/,'')+'/rest/v1/'+path.replace(/^\//,'');
+  var headers=Object.assign({
+    'apikey':cfg.key,
+    'Authorization':'Bearer '+cfg.key,
+    'Content-Type':'application/json'
+  },options.headers||{});
+  var method=options.method||'GET';
+  var body=options.body||null;
+  var _log={t:new Date().toISOString().slice(11,19),m:method,u:path,s:0,e:'请求中'};
+  _debugLogs.unshift(_log);if(_debugLogs.length>20)_debugLogs.length=20;
+  return new Promise(function(resolve,reject){
+    var xhr=new XMLHttpRequest();
+    xhr.open(method,url,true);
+    Object.keys(headers).forEach(function(k){xhr.setRequestHeader(k,headers[k]);});
+    xhr.timeout=15000;
+    xhr.ontimeout=function(){_log.e='超时';reject(new Error('请求超时'));};
+    xhr.onerror=function(){_log.e='网络错误('+xhr.readyState+','+xhr.status+')';reject(new Error('网络错误'));};
+    xhr.onload=function(){
+      _log.s=xhr.status;_log.e=xhr.status>=200&&xhr.status<300?'OK':'ERR';
+      resolve({
+        ok:xhr.status>=200&&xhr.status<300,
+        status:xhr.status,
+        json:function(){try{return Promise.resolve(JSON.parse(xhr.responseText));}catch(e){return Promise.reject(e);}}
+      });
+    };
+    xhr.send(body);
+  });
+}
+
+/* 调试日志查看 */
+function showDebugLogs(){
+  var html='<div style="font-size:0.5rem;font-family:monospace;line-height:1.6;">';
+  if(_debugLogs.length===0){
+    html+='<div style="color:#5a6a7a;">暂无日志</div>';
+  }else{
+    for(var i=0;i<_debugLogs.length;i++){
+      var d=_debugLogs[i];
+      var color=d.e==='OK'?'#4CAF50':(d.e==='请求中'?'#FFA726':'#e74c3c');
+      html+='<div style="color:'+color+';">['+d.t+'] '+d.m+' '+d.u+' → '+d.s+' '+d.e+'</div>';
+    }
+  }
+  html+='</div><div style="text-align:center;margin-top:8px;"><button onclick="hideModal()" style="background:#4A90E2;color:#fff;border:none;border-radius:8px;padding:8px 24px;font-size:0.75rem;cursor:pointer;">关闭</button></div>';
+  showModal('📋 请求日志',html);
+}
+
+/* 同步调试面板（统一日志格式） */
+var _syncLogs=[];
+function syncDebugClear(){
+  _syncLogs=[];
+  var wrap=document.getElementById('syncDebugWrap');
+  var full=document.getElementById('syncDebugFull');
+  var summary=document.getElementById('syncDebugSummary');
+  if(wrap)wrap.style.display='none';
+  if(full)full.style.display='none';
+  if(summary)summary.style.display='none';
+}
+function syncDebug(msg){
+  _syncLogs.push(msg);
+  console.warn('Sync:'+msg);
+  renderSyncDebug();
+}
+function renderSyncDebug(){
+  var wrap=document.getElementById('syncDebugWrap');
+  var summary=document.getElementById('syncDebugSummary');
+  var full=document.getElementById('syncDebugFull');
+  if(!wrap||!summary||!full)return;
+  wrap.style.display='block';
+  var expanded=full.style.display==='block';
+  if(expanded){
+    summary.style.display='none';
+    full.style.display='block';
+    var h='';
+    for(var i=0;i<_syncLogs.length;i++)h+='<div>'+_syncLogs[i]+'</div>';
+    h+='<div style="color:#5a6a7a;margin-top:2px;cursor:pointer;text-align:center;" onclick="toggleSyncDebug()">▲ 收起</div>';
+    full.innerHTML=h;
+    full.scrollTop=full.scrollHeight;
+  }else{
+    summary.style.display='block';
+    full.style.display='none';
+    var show=Math.min(_syncLogs.length,6);
+    var s='';
+    for(var i=0;i<show;i++)s+='<div>'+_syncLogs[i]+'</div>';
+    if(_syncLogs.length>6)s+='<div style="color:#4A90E2;margin-top:1px;">▼ 展开全部 ('+_syncLogs.length+' 条)</div>';
+    summary.innerHTML=s;
+  }
+}
+function toggleSyncDebug(){
+  var full=document.getElementById('syncDebugFull');
+  if(!full)return;
+  full.style.display=full.style.display==='block'?'none':'block';
+  renderSyncDebug();
+}
+
+function syncTodayToLeaderboard(){
+  if(!isSupabaseConfigured())return Promise.resolve(0);
+  var me=getMyAnimal();
+  var uid=getAnonUserId();
+  var todayKey=getDateKey(new Date());
+  var localRecs=gState.records.filter(function(r){return r.dateKey===todayKey;});
+  syncDebug('用户 ID: '+(uid?uid.substring(0,8)+'...':'未设置'));
+  syncDebug('📱 手表本地: '+localRecs.length+' 条, '+localRecs.reduce(function(s,r){return s+r.amount;},0)+'ml');
+
+  // 第 1 步：拉取云端记录
+  syncDebug('📥 拉取云端记录合并到本地...');
+  var fetchUrl='leaderboard?select=today_records&user_id=eq.'+encodeURIComponent(uid)+'&limit=1';
+  syncDebug('🔍 GET .../rest/v1/'+fetchUrl.substring(0,60));
+  return sbFetch(fetchUrl)
+    .then(function(r){
+      syncDebug('🔍 HTTP '+r.status+' '+(r.ok?'OK':'ERR'));
+      if(!r.ok){syncDebug('🔍 请求失败');return[];}
+      return r.json();
+    })
+    .then(function(data){
+      var cloudRecs=[];
+      if(data&&data.length>0&&data[0].today_records)cloudRecs=data[0].today_records;
+      if(cloudRecs.length===0){
+        syncDebug('🔍 返回空，无云端记录');
+      }else{
+        syncDebug('🔍 返回 today_records: '+cloudRecs.length+' 条');
+        var details=[];
+        for(var i=0;i<cloudRecs.length;i++){
+          var cr=cloudRecs[i];
+          details.push((cr.id?cr.id.substring(0,6):'?')+'='+(cr.amount||0)+'ml'+(cr.mood||''));
+        }
+        syncDebug('🔍 记录详情: '+details.join(', '));
+      }
+
+      // 第 2 步：按 id 去重合并到本地
+      var localCnt=0;
+      for(var i=0;i<gState.records.length;i++){if(gState.records[i].dateKey===todayKey)localCnt++;}
+      syncDebug('📥 本地已有 '+localCnt+' 条, 云端 '+cloudRecs.length+' 条');
+      var added=0;
+      var localKeys={};
+      for(var i=0;i<gState.records.length;i++){if(gState.records[i].dateKey===todayKey)localKeys[gState.records[i].id]=true;}
+      var addedIds=[];
+      for(var i=0;i<cloudRecs.length;i++){
+        var cr=cloudRecs[i];
+        if(!cr.id||localKeys[cr.id])continue;
+        gState.records.push({
+          id:cr.id,amount:cr.amount||0,dateTime:cr.time||new Date().toISOString(),
+          dateKey:todayKey,mood:cr.mood||''
+        });
+        localKeys[cr.id]=true;
+        added++;
+        addedIds.push(cr.id.substring(0,6));
+      }
+      if(added>0){
+        saveRecords(gState.records);
+        refreshUI();
+        syncDebug('📥 合并了 '+added+' 条: '+addedIds.join(', '));
+      }else{
+        syncDebug('📥 无新记录（云端 ID 全部已在本地）');
+      }
+
+      // 第 3 步：拼出合并后的完整 today_records
+      var merged=[];
+      for(var i=0;i<gState.records.length;i++){if(gState.records[i].dateKey===todayKey)merged.push(gState.records[i]);}
+      var total=0;for(var i=0;i<merged.length;i++)total+=merged[i].amount;
+      var streak=calcStreak(gState.records,gState.settings.dailyGoal);
+
+      // 第 4 步：推送合并后的完整数据
+      var pushRecs=merged.map(function(r){return{id:r.id,amount:r.amount,time:r.dateTime,mood:r.mood||''};});
+      var pushIds=[];
+      for(var i=0;i<pushRecs.length;i++)pushIds.push(pushRecs[i].id.substring(0,6));
+      syncDebug('📤 推送 '+pushRecs.length+' 条, 总量 '+total+'ml, 连续 '+streak+' 天');
+      syncDebug('📤 推送记录 ID: '+pushIds.join(', '));
+      return sbFetch('leaderboard?on_conflict=user_id',{
+        method:'POST',
+        headers:{'Prefer':'resolution=merge-duplicates'},
+        body:JSON.stringify({
+          user_id:uid,nickname:me.name,avatar_idx:me.idx,
+          today_ml:total,streak:streak,today_records:pushRecs,
+          updated_at:new Date().toISOString()
+        })
+      }).then(function(r){
+        syncDebug('🌐 HTTP '+r.status+' '+(r.status>=200&&r.status<300?'✅ 推送成功':'❌ 失败'));
+        var finalTotal=0;
+        for(var i=0;i<gState.records.length;i++){if(gState.records[i].dateKey===todayKey)finalTotal+=gState.records[i].amount;}
+        syncDebug('📱 手表本地现在: '+localCnt+' 条, '+finalTotal+'ml');
+        if(added>0)syncDebug('⌚ 本次合并了 '+added+' 条手表记录 ✅');
+        else syncDebug('⌚ 未检测到手表的记录 ❌');
+        return added;
+      });
+    }).catch(function(e){
+      syncDebug('❌ 同步失败: '+(e.message||e));
+      return 0;
+    });
+}
+
+function fetchLeaderboard(limit){
+  if(!isSupabaseConfigured())return Promise.resolve([]);
+  return sbFetch('leaderboard?select=*&order=today_ml.desc&limit='+(limit||20))
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(function(data){return data||[];})
+    .catch(function(e){console.warn('LB fetch err '+(e.message||e));return[];});
+}
+
+function showSupabaseDialog(){
+  var cfg=loadSupabaseConfig();
+  var status=isSupabaseConfigured()
+    ?'<div style="color:#4CAF50;margin-bottom:8px;font-weight:600;font-size:0.75rem;">✅ 已配置</div>'
+    :'<div style="color:#8a9aaa;margin-bottom:8px;font-size:0.625rem;">⚠️ 未配置 — 排行榜使用本地数据</div>';
+  showModal('在线排行榜',status+
+    '<input type="text" id="sbUrlInput" value="'+(cfg.url||'')+'" placeholder="https://xxxxx.supabase.co">'+
+    '<input type="text" id="sbKeyInput" value="'+(cfg.key||'')+'" placeholder="anon key">'+
+    '<div style="font-size:0.5625rem;color:#5a6a7a;line-height:1.4;">在 supabase.com 免费注册，项目 Settings → API 中找到 URL 和 anon key</div>',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'测试连接',cls:'btn-confirm',action:function(){testSupabaseConnection();}}]);
+}
+
+function testSupabaseConnection(){
+  var url=document.getElementById('sbUrlInput').value.trim();
+  var key=document.getElementById('sbKeyInput').value.trim();
+  if(!url||!key){showToast('请填写完整的 URL 和 Key');return;}
+  saveSupabaseConfig({url:url,key:key});
+  sbFetch('leaderboard?select=count&limit=1',{})
+    .then(function(r){
+      if(!r.ok)throw new Error(r.status+'');
+      showToast('✅ 连接成功！');hideModal();updateSettingsUI();
+    }).catch(function(e){
+      showToast('连接失败：'+e.message);
+      saveSupabaseConfig({url:'',key:''});
+    });
+}
+
+/* === 云端记录拉取与合并（备用，供启动时调用） === */
+function fetchMyTodayRecordsFromCloud(){
+  if(!isSupabaseConfigured())return Promise.resolve(null);
+  var uid=getAnonUserId();
+  return sbFetch('leaderboard?select=today_records&user_id=eq.'+encodeURIComponent(uid)+'&limit=1')
+    .then(function(r){if(!r.ok)return null;return r.json();})
+    .then(function(data){
+      if(data&&data.length>0&&data[0].today_records)return data[0].today_records;
+      return null;
+    })
+    .catch(function(e){console.warn('Cloud fetch err '+(e.message||e));return null;});
+}
+
+function mergeCloudTodayRecords(){
+  return fetchMyTodayRecordsFromCloud().then(function(cloudRecs){
+    if(!cloudRecs||cloudRecs.length===0)return 0;
+    var todayKey=getDateKey(new Date());
+    var localKeys={};
+    gState.records.forEach(function(r){localKeys[r.id]=true;});
+    var added=0;
+    cloudRecs.forEach(function(cr){
+      if(!cr.id||localKeys[cr.id])return;
+      gState.records.push({
+        id:cr.id,amount:cr.amount||0,dateTime:cr.time||new Date().toISOString(),
+        dateKey:todayKey,mood:cr.mood||''
+      });
+      localKeys[cr.id]=true;
+      added++;
+    });
+    if(added>0){
+      saveRecords(gState.records);
+      refreshUI();
+    }
+    return added;
+  });
+}
+
+/* === 手机配对 === */
+function pairWithPhone(){
+  showModal('连接手机',
+    '<div style="font-size:0.625rem;color:#5a6a7a;margin-bottom:8px;">在手机端生成配对码后，在下方输入 6 位数字</div>'+
+    '<input type="text" id="pairCodeInput" placeholder="输入 6 位配对码" maxlength="6" style="font-size:1.25rem;letter-spacing:4px;text-align:center;">',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'确认配对',cls:'btn-confirm',action:function(){
+       var code=document.getElementById('pairCodeInput').value.trim();
+       if(!code||code.length!==6){showToast('请输入 6 位配对码');return;}
+       doPair(code);
+     }}]);
+}
+
+function doPair(pairingCode){
+  if(!isSupabaseConfigured()){showToast('请先配置 Supabase');return;}
+  // 按钮置灰防重复
+  showToast('🔄 正在配对...');
+  sbFetch('device_pairing?select=user_id&pairing_code=eq.'+encodeURIComponent(pairingCode)+'&limit=1')
+    .then(function(r){
+      if(!r.ok){
+        if(r.status===404)throw new Error('device_pairing 表不存在，请先在 Supabase 建表');
+        if(r.status===401||r.status===403)throw new Error('API 权限不足，请检查 RLS 策略');
+        throw new Error('HTTP '+r.status);
+      }
+      return r.json();
+    })
+    .then(function(data){
+      if(!data||data.length===0){showToast('❌ 配对码无效');return;}
+      var phoneUserId=data[0].user_id;
+      if(!phoneUserId){showToast('❌ 配对数据异常');return;}
+      localStorage.setItem(ANON_USER_KEY,phoneUserId);
+      localStorage.setItem('lb_paired_with_phone','1');
+      hideModal();
+      showToast('✅ 配对成功！正在同步...');
+      return forceSync().then(function(added){
+        return pullPhoneIdentity().then(function(){
+          showToast('✅ 已与手机同步，合并 '+added+' 条记录');
+          updateSettingsUI();
+        });
+      });
+    })
+    .catch(function(e){
+      showToast('❌ '+e.message);
+    });
+}
+
+/* === 强制同步 === */
+function forceSync(){
+  // syncTodayToLeaderboard 已内部完成 拉→合→推
+  return syncTodayToLeaderboard().then(function(added){
+    return added||0;
+  }).catch(function(){return 0;});
+}
+
+/* 设置页调用的同步包装（带 Toast 反馈） */
+function doForceSync(){
+  if(!isSupabaseConfigured()){showToast('请先配置 Supabase');return;}
+  syncDebugClear();
+  syncDebug('🔄 开始同步...');
+  showToast('🔄 同步中...');
+  forceSync().then(function(added){
+    syncDebug('✅ 同步完成'+(added>0?'，合并 '+added+' 条':''));
+    showToast(added>0?'✅ 同步完成，合并 '+added+' 条':'✅ 已是最新');
+  });
+}
+
+/* 从云端拉取手机端头像和昵称，写入本地（手机为身份权威） */
+function pullPhoneIdentity(){
+  if(!isSupabaseConfigured())return Promise.resolve();
+  var uid=getAnonUserId();
+  return sbFetch('leaderboard?select=avatar_idx,nickname&user_id=eq.'+encodeURIComponent(uid)+'&limit=1')
+    .then(function(r){if(!r.ok)return null;return r.json();})
+    .then(function(data){
+      if(!data||data.length===0)return;
+      var row=data[0];
+      if(typeof row.avatar_idx==='number'){
+        localStorage.setItem('lb_animal_idx',row.avatar_idx.toString());
+      }
+      if(row.nickname){
+        localStorage.setItem('lb_nickname',row.nickname);
+      }
+      updateSettingsUI();
+    })
+    .catch(function(e){console.warn('Pull identity:',e);});
+}
+
+/* 断开云连接 */
+function disconnectCloud(){
+  showModal('断开连接','确定要清除排行榜配置吗？数据仍保留在本地。',
+    [{text:'取消',cls:'btn-cancel',action:hideModal},
+     {text:'确认断开',cls:'btn-danger',action:function(){
+       localStorage.removeItem(SUPABASE_CONFIG_KEY);
+       localStorage.removeItem('lb_paired_with_phone');
+       hideModal();
+       updateSettingsUI();
+       showToast('已断开云连接');
+     }}]);
+}
+
+/* === 排行榜 === */
+var _lbCache=null;
+function loadLeaderboard(){
+  var listEl=document.getElementById('lbList');
+  if(!listEl)return;
+  if(!isSupabaseConfigured()){
+    listEl.innerHTML='<div class="lb-empty"><span class="icon">⚠️</span>未配置在线排行榜<br><span style="font-size:0.5rem;color:#5a6a7a;">请到设置中配置 Supabase</span></div>';
+    return;
+  }
+  listEl.innerHTML='<div class="lb-empty"><span class="icon">🌐</span>加载中...</div>';
+  fetchLeaderboard(20).then(function(data){
+    _lbCache=data;
+    if(!data||data.length===0){
+      listEl.innerHTML='<div class="lb-empty"><span class="icon">📋</span>暂无排行数据<br><span style="font-size:0.5rem;color:#5a6a7a;">记录喝水数据后自动同步</span></div>';
+      return;
+    }
+    var meId=getAnonUserId();
+    /* 过滤掉已删除的用户 */
+    data=data.filter(function(d){return !d.nickname||(d.nickname.indexOf('已断开')===-1&&d.nickname.indexOf('已删除')===-1);});
+    if(data.length===0){
+      listEl.innerHTML='<div class="lb-empty"><span class="icon">📋</span>暂无排行数据</div>';
+      return;
+    }
+    var html='';
+    for(var i=0;i<data.length;i++){
+      var d=data[i];
+      var rank=i+1;
+      var rankCls='';
+      if(rank===1)rankCls='gold';
+      else if(rank===2)rankCls='silver';
+      else if(rank===3)rankCls='bronze';
+      var isSelf=d.user_id===meId?' lb-self':'';
+      var avatarIdx=typeof d.avatar_idx==='number'?d.avatar_idx:0;
+      var avatarEmoji=LB_ANIMALS[avatarIdx]||'🐼';
+      var nickname=d.nickname||LB_NAMES[avatarIdx]||'未知';
+      var streak=d.streak||0;
+      html+='<div class="lb-item'+isSelf+'">'+
+        '<div class="lb-rank '+rankCls+'">#'+rank+'</div>'+
+        '<div class="lb-avatar">'+avatarEmoji+'</div>'+
+        '<div class="lb-info"><div class="lb-name">'+nickname+'</div>'+
+        '<div class="lb-detail">🔥 '+streak+' 天连续</div></div>'+
+        '<div class="lb-stats"><div class="lb-today">'+(d.today_ml||0)+' ml</div>'+
+        '<div class="lb-streak">今日</div></div></div>';
+    }
+    listEl.innerHTML=html;
+  }).catch(function(){
+    listEl.innerHTML='<div class="lb-empty"><span class="icon">❌</span>加载失败<br><span style="font-size:0.5rem;color:#5a6a7a;">请检查网络连接</span></div>';
+  });
+}
+
+/* === 心情选择 === */
+(function initMoods(){
+  var moods=['\u{1F60A}','\u{1F604}','\u{1F970}','\u{1F60C}','\u{1F624}','\u{1F622}','\u{1F92F}','\u{1F4AA}','\u{1F60E}','\u{1F929}','\u{1F607}','\u{1F914}','\u{1F634}','\u{1F630}'];
+  var html='';
+  for(var i=0;i<moods.length;i++){
+    html+='<button class="mood-btn" data-mood="'+moods[i]+'" onclick="selectMood(this)">'+moods[i]+'</button>';
+  }
+  document.getElementById('moodRow').innerHTML=html;
+})();
+
+function selectMood(el){
+  document.querySelectorAll('.mood-btn').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  _selectedMood=el.getAttribute('data-mood');
+}
+
+/* === Tab 切换 === */
+function switchTab(idx){
+  var pages=['page-home','page-garden','page-history','page-leaderboard','page-settings'];
+  var titles=['💧 喝水','🌱 花园','📊 历史','🏆 排行','⚙️ 设置'];
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById(pages[idx]).classList.add('active');
+  document.getElementById('appbarTitle').textContent=titles[idx];
+  document.querySelectorAll('.bottom-nav button').forEach(function(b,i){b.classList.toggle('active',i===idx);});
+  if(idx===2)renderStats();
+  if(idx===1)renderGarden();
+  if(idx===3)loadLeaderboard();
+}
+
+/* === Chart 切换 === */
+function switchChart(isWeek){
+  gState.chartWeek=isWeek;
+  var btns=document.querySelectorAll('#chartToggle button');
+  btns[0].classList.toggle('active',isWeek);
+  btns[1].classList.toggle('active',!isWeek);
+  renderStats();
+}
+
+/* === Modal / Toast === */
+function showModal(title,body,actions){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalBody').innerHTML=body||'';
+  var actionsEl=document.getElementById('modalActions');
+  actionsEl.innerHTML='';
+  (actions||[]).forEach(function(a){
+    var btn=document.createElement('button');
+    btn.textContent=a.text;
+    btn.className=a.cls||'btn-confirm';
+    btn.onclick=a.action;
+    actionsEl.appendChild(btn);
+  });
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function hideModal(){document.getElementById('modalOverlay').classList.remove('show');}
+function showToast(msg){
+  var el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer=setTimeout(function(){el.classList.remove('show');},1800);
+}
+
+/* === 窗口尺寸变化重绘图表 === */
+var _resizeTimer=null;
+window.addEventListener('resize',function(){
+  clearTimeout(_resizeTimer);
+  _resizeTimer=setTimeout(function(){
+    var activePage=document.querySelector('.page.active');
+    if(activePage&&activePage.id==='page-history')renderStats();
+  },200);
+});
+
+/* === 启动 === */
+(function loadAll(){
+  gState.settings=loadSettings();
+  gState.records=loadRecords();
+  applyDarkMode(localStorage.getItem('dark_mode')||'auto');
+  refreshUI();
+  /* 尝试同步到 Supabase（如有配置） */
+  if(isSupabaseConfigured()){
+    syncTodayToLeaderboard();
+  }
+  /* 监听深色模式变化 */
+  if(window.matchMedia){
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){
+      applyDarkMode(localStorage.getItem('dark_mode')||'auto');
+    });
+  }
+  /* 定时模式：每分钟检查一次时间 */
+  setInterval(function(){
+    var mode=localStorage.getItem('dark_mode')||'auto';
+    if(mode==='timer')applyDarkMode('timer');
+  },60000);
+})();
+</script>
+</body>
+</html>

@@ -213,6 +213,38 @@ create-keystore.bat
 | **提醒** | AlarmManager + NotificationChannel |
 | **构建** | Gradle 8.2.2 + Android SDK 34 |
 | **状态管理** | localStorage + 全局 `gState` 对象 |
+---
+
+## 已知问题与待修复项
+
+### 🔴 P0 — 数据同步
+
+| 问题 | 归属 | 根因 | 修复方向 |
+|------|------|------|---------|
+| **手机端看不到手表推送的数据** | 手机端 | 手机合并逻辑未正确识别手表推送的 `today_records`（可能 time 字段格式或 id 冲突） | 手机端拉取后按 id 去重合并到本地 |
+| **删除记录不同步（双向）** | 两端 | 合并策略只按 id 去重追加，不会删除本地有但云端没有的记录 | 改为"以云端为准"：本地有的、云端没有的 → 删掉 |
+
+### 🟡 P1 — 推送字段缺失
+
+| 问题 | 归属 | 说明 |
+|------|------|------|
+| **推送缺少 `week_ml` / `month_ml`** | 手表端 | `syncTodayToLeaderboard()` 只带了 `today_ml`，排行榜切到"本周/本月"时手表用户数据缺失 |
+| **推送缺少 `pill_today`** | 两端 | 吃药标记字段未推送，手机端和手表端均不显示 |
+| **拉取缺少 delete 同步** | 手表端 | 合并时只追加不删除，见 P0 |
+
+### 🟠 P2 — 代码质量
+
+| 问题 | 说明 |
+|------|------|
+| **硬编码 Supabase 凭证** | `loadSupabaseConfig()` 返回写死的 URL 和 Key，无法灵活切换 |
+| **大量重复代码** | `getAnonUserId`、`loadSettings`、`saveRecords`、`showModal` 等工具函数与 Web 版重复，改了一端容易忘另一端 |
+
+### 🔵 P3 — 架构
+
+| 问题 | 说明 |
+|------|------|
+| **共用 `user_id` 无法区分数据来源** | 手机和手表使用同一 `user_id`，调试时不知道一条记录是手机还是手表写的 |
+| **WebView 版本过旧** | Oppo Watch 2 的 WebView 为 Chrome 61（2017），不支持 ES6+、`fetch()`、`crypto.randomUUID()`等现代 API，需大量 polyfill |
 
 ---
 
